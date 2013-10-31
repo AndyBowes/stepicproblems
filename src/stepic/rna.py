@@ -1,7 +1,7 @@
 '''
 Created on 24 Oct 2013
 
-@author: root
+@author: Andy Bowes
 '''
 
 from itertools import takewhile,product
@@ -23,18 +23,16 @@ rnaCoding = {'ACC': 'T', 'GCA': 'A', 'AAG': 'K', 'AAA': 'K', 'GUU': 'V', 'AAC': 
              'UUU': 'F', 'GAC': 'D', 'GUA': 'V', 'UGC': 'C', 'GCU': 'A', 'UAG': 'STOP', 'CUC': 'L', 'UUG': 'L', 'UUA': 'L', 'GAU': 'D', 'UUC': 'F'}
 
 def readCodingTable():
-    rna_codes = None
     with open('rna_coding.txt') as fp:
         lines = [l.strip().split(' ') for l in fp.readlines()]
         rna_codes = { l[0]:l[1] for l in lines }
-    print rna_codes
+        print rna_codes
 
 def readAminoAcids():
-    aminos = None
     with open('aminoAcid.txt') as fp:
         lines = [l.strip().split(' ') for l in fp.readlines()]
         aminos = { l[0]:int(l[1]) for l in lines }
-    print aminos
+        print aminos
 
 
 def proteinTranslation(rna):
@@ -55,11 +53,19 @@ def peptideEncoding(dna,protein):
     motifLength = 3*len(protein)
     return [dna[i:i+motifLength] for i in range(len(dna)-motifLength) if dna[i:i+motifLength] in motifs]
   
-def subpeptides(protein):
+def cyclicsubpeptides(protein):
     doubleProtein = protein*2
     return [doubleProtein[i:i+j] for i in range(len(protein)) for j in range(1,len(protein)) ]
 
-def theoreticalSpectrum(protein):
+def cyclicSpectrum(protein):
+    peptides = cyclicsubpeptides(protein) + ['',protein]
+    spectrum = [sum([aminoAcids[a] for a in p]) for p in peptides]
+    return sorted( spectrum) 
+
+def subpeptides(protein):
+    return [protein[i:i+j] for i in range(len(protein)) for j in range(1,len(protein)-i) ]
+
+def linearSpectrum(protein):
     peptides = subpeptides(protein) + ['',protein]
     spectrum = [sum([aminoAcids[a] for a in p]) for p in peptides]
     return sorted( spectrum) 
@@ -69,16 +75,19 @@ def cyclopeptideSequencing(spectrum):
     available = [p[s] for s in spectrum if s in aminoAcids.itervalues()]
     peptides = available
     while len(peptides) > 0:
-        peptides = ["".join(p) for p in product(peptides,available)]
+        peptides = list(set(["".join(p) for p in product(peptides,available)]))
         print 'Before:' + ",".join(peptides)
         for peptide in copy(peptides):
-            peptideSpectrum = theoreticalSpectrum(peptide)
-            if peptideSpectrum == spectrum:
+            peptideSpectrum = linearSpectrum(peptide)
+            if cyclicSpectrum(peptide) == spectrum:
                 yield peptideToMassChain(peptide)
                 peptides.remove(peptide)
             elif not sublist(peptideSpectrum, spectrum):
                 peptides.remove(peptide)
         print 'After:' + ",".join(peptides)
+        
+def peptideWeight(peptide):
+    return sum([aminoAcids[a] for a in peptide])
                 
 def leaderboardCyclopeptideSequencing(spectrum, n):
     
@@ -97,19 +106,25 @@ def leaderboardCyclopeptideSequencing(spectrum, n):
     while len(peptides) > 0:
         leaderboard = defaultdict(list)
         peptides = ["".join(p) for p in product(peptides,available)]
+#        print 'Before:' + ",".join(peptides)
         for peptide in copy(peptides):
-            peptideSpectrum = theoreticalSpectrum(peptide)
-            if peptideSpectrum[-1] > spectrum[-1]:
+            weight = peptideWeight(peptide)
+            if weight > spectrum[-1]:
                 peptides.remove(peptide)
             else:
+                peptideSpectrum = cyclicSpectrum(peptide)
                 peptideScore = score(peptideSpectrum, spectrum)
-                if peptideSpectrum[-1] == spectrum[-1]:
-                    if peptideScore >= bestScore:
+                if weight == spectrum[-1]:
+#                    peptideScore = score(cyclicSpectrum(peptide), spectrum)
+                    if peptideScore > bestScore:
                         bestPeptide = peptide
+                        bestScore = peptideScore
                 leaderboard[peptideScore].append(peptide)
         # Take the highest N scores from the round
         peptides = cut(leaderboard,n)
-    print theoreticalSpectrum(bestPeptide)
+#        print 'After:' + ",".join(peptides)
+    print bestScore
+    print cyclicSpectrum(bestPeptide)
     return peptideToMassChain(bestPeptide)        
 
 def peptideToMassChain(peptide):
