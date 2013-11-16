@@ -4,7 +4,7 @@ Created on 24 Oct 2013
 @author: root
 '''
 import unittest
-from stepic.rna import cyclopeptideSequencing, linearSpectrum, peptideToMassChain, sublist, cyclicSpectrum, leaderboardCyclopeptideSequencing
+from stepic.rna import cyclopeptideSequencing, linearSpectrum, sublist, cyclicSpectrum, leaderboardCyclopeptideSequencing, convolutionCyclopeptideSequencing
 
 class Test(unittest.TestCase):
     def getSpectrum(self):
@@ -35,9 +35,15 @@ class Test(unittest.TestCase):
     def testLeaderBoardCyclopeptideSequencing(self):
         with open('data/leaderboardcyclopeptide.txt') as fp:
             n = int(fp.readline().strip())
-            spectrum = [ int(x) for x in fp.readline().split()]
+            spectrum = sorted([ int(x) for x in fp.readline().split()])
             print leaderboardCyclopeptideSequencing(spectrum, n)
-        
+    
+    def testConvolutionCyclicSequence(self):
+        with open('data/convolutionCyclicSequence.txt') as fp:
+            m = int(fp.readline().strip())
+            n = int(fp.readline().strip())
+            spectrum = sorted([ int(x) for x in fp.readline().split()])
+            print convolutionCyclopeptideSequencing(spectrum, m, n)
 
 if __name__ == "__main__":
     #import sys;sys.argv = ['', 'Test.testName']
