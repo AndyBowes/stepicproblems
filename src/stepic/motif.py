@@ -56,12 +56,33 @@ def medianString(dna, k):
             bestKmer = kmer
     return bestKmer
 
+def kmerProb(kmer, profile):
+    prob = 1.0
+    for i in range(len(kmer)):
+        prob *= profile[i]['ACGT'.index(kmer[i])]
+    return prob
+
+def probableKmer(dna, k, profile):
+    kmers = getKmers(dna, k)
+    bestKmer = ''
+    bestProb = 0
+    for kmer in kmers:
+        prob = kmerProb(kmer, profile)
+        if prob > bestProb:
+            bestProb = prob
+            bestKmer = kmer
+    return bestKmer, bestProb
+
 if __name__ == '__main__':
 #    print hammingDistance('AAAAA', 'AATCA')
 #    kmers = motifEnumeration(['ATTTGGC', 'TGCCTTA', 'CGGTATC', 'GAAAATT'], 3, 1)
-    print medianString(['AAATTGACGCAT', 'GACGACCACGTT', 'CGTCAGCGCCTG',
-                        'GCTGAGCACCGG', 'AGTACGGGACAG'], 3)
-
+#    print medianString(['AAATTGACGCAT', 'GACGACCACGTT', 'CGTCAGCGCCTG',
+#                        'GCTGAGCACCGG', 'AGTACGGGACAG'], 3)
+    print probableKmer('ACCTGTTTATTGCCTAAGTTCCGAACAAACCCAATATAGCCCGAGGGCCT', 5, [[0.2, 0.4, 0.3, 0.1],
+                                                                                [0.2, 0.3, 0.3, 0.2],
+                                                                                [0.3, 0.1, 0.5, 0.1],
+                                                                                [0.2, 0.5, 0.2, 0.1],
+                                                                                [0.3, 0.1, 0.4, 0.2]])
     # getKmerVariations('CAT', 1)
     # patterns = ['100','010','001']
     # print [ ''.join(k) for p in patterns for k in product(*map(applyWildCard,'CAT',p))]
