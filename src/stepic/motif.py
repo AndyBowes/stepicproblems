@@ -73,16 +73,38 @@ def probableKmer(dna, k, profile):
             bestKmer = kmer
     return bestKmer, bestProb
 
+def constructProbabilityProfile(motifs):
+    """
+    Construct the probability matrix for the set of Motifs
+    """
+    occurs = [[0.0 for _ in xrange(4)] for _ in xrange(len(motifs))]
+    noOfMotifs = len(motifs)
+    for i in range(noOfMotifs):
+        motif = motifs[i]
+        for j in range(len(motif)):
+            occurs[j]['ACGT'.index(motif[j])] += (1.0/noOfMotifs)
+    return occurs
+
+def greedyMotifSearch(dna, k):
+    """
+    Perform a Greedy Search for the best kmers on a set of DNA
+    """
+    motifs = [seq[:k] for seq in dna]
+    bestMotifs = motifs
+    profile = constructProbabilityProfile(bestMotifs)
+    motifScore = 0
+    for i in range(len(dna[0]) - k):
+        motifs[0] = dna[0][i:i+k]
+        
+        for j in range(1, len(dna)):
+            pass
+        score = 
+        if score < motifScore:
+            motifScore = score
+            bestMotifs = motifs
+    return bestMotifs
+
 if __name__ == '__main__':
-#    print hammingDistance('AAAAA', 'AATCA')
-#    kmers = motifEnumeration(['ATTTGGC', 'TGCCTTA', 'CGGTATC', 'GAAAATT'], 3, 1)
-#    print medianString(['AAATTGACGCAT', 'GACGACCACGTT', 'CGTCAGCGCCTG',
-#                        'GCTGAGCACCGG', 'AGTACGGGACAG'], 3)
-    print probableKmer('ACCTGTTTATTGCCTAAGTTCCGAACAAACCCAATATAGCCCGAGGGCCT', 5, [[0.2, 0.4, 0.3, 0.1],
-                                                                                [0.2, 0.3, 0.3, 0.2],
-                                                                                [0.3, 0.1, 0.5, 0.1],
-                                                                                [0.2, 0.5, 0.2, 0.1],
-                                                                                [0.3, 0.1, 0.4, 0.2]])
-    # getKmerVariations('CAT', 1)
-    # patterns = ['100','010','001']
-    # print [ ''.join(k) for p in patterns for k in product(*map(applyWildCard,'CAT',p))]
+    profile = constructProbabilityProfile(['CGTA', 'CAGA', 'TTAA', 'CACA'])
+    for l in profile:
+        print l

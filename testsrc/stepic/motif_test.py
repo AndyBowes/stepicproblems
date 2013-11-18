@@ -4,7 +4,7 @@ Created on 16 Nov 2013
 @author: andy
 '''
 import unittest
-from stepic.motif import motifEnumeration, medianString, probableKmer
+from stepic.motif import motifEnumeration, medianString, probableKmer, greedyMotifSearch
 
 class MotifTest(unittest.TestCase):
 
@@ -40,6 +40,14 @@ class MotifTest(unittest.TestCase):
             fp.readline()  # Ignore Base Title
             profile = [[float(x) for x in l.split() ]  for l in fp.readlines()]
             print probableKmer(dna, k, profile)
+
+    def testGreedMotifSearch(self):
+        k = 3
+        dna = ['GGCGTTCAGGCA', 'AAGAATCAGTCA', 'CAAGGAGTTCGC', 'CACGTCAATCAC', 'CAATAATATTCG']
+        bestMotifs = greedyMotifSearch(dna, k)
+        self.assertEquals(bestMotifs, ['CAG', 'CAG', 'CAA', 'CAA', 'CAA'])
+
+
 
 if __name__ == "__main__":
     # import sys;sys.argv = ['', 'Test.testName']
