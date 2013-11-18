@@ -41,7 +41,7 @@ class MotifTest(unittest.TestCase):
             profile = [[float(x) for x in l.split() ]  for l in fp.readlines()]
             print probableKmer(dna, k, profile)
 
-    def testGreedMotifSearch(self):
+    def testGreedyMotifSearch(self):
         k = 3
         dna = ['GGCGTTCAGGCA', 'AAGAATCAGTCA', 'CAAGGAGTTCGC', 'CACGTCAATCAC', 'CAATAATATTCG']
         bestMotifs = greedyMotifSearch(dna, k)

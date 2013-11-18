@@ -73,6 +73,15 @@ def probableKmer(dna, k, profile):
             bestKmer = kmer
     return bestKmer, bestProb
 
+def scoreMotifs(motifs):
+    occurs = [[0 for _ in xrange(4)] for _ in xrange(len(motifs))]
+    noOfMotifs = len(motifs)
+    for i in range(noOfMotifs):
+        motif = motifs[i]
+        for j in range(len(motif)):
+            occurs[j]['ACGT'.index(motif[j])] += 1
+    return sum([noOfMotifs - max([x for x in m]) for m in occurs ])
+
 def constructProbabilityProfile(motifs):
     """
     Construct the probability matrix for the set of Motifs
@@ -82,7 +91,7 @@ def constructProbabilityProfile(motifs):
     for i in range(noOfMotifs):
         motif = motifs[i]
         for j in range(len(motif)):
-            occurs[j]['ACGT'.index(motif[j])] += (1.0/noOfMotifs)
+            occurs[j]['ACGT'.index(motif[j])] += (1.0 / noOfMotifs)
     return occurs
 
 def greedyMotifSearch(dna, k):
@@ -91,18 +100,18 @@ def greedyMotifSearch(dna, k):
     """
     motifs = [seq[:k] for seq in dna]
     bestMotifs = motifs
-    profile = constructProbabilityProfile(bestMotifs)
-    motifScore = 0
+    # profile = constructProbabilityProfile(motifs)
+    motifScore = scoreMotifs(motifs)
     for i in range(len(dna[0]) - k):
-        motifs[0] = dna[0][i:i+k]
-        
+        motifs[0] = dna[0][i:i + k]
         for j in range(1, len(dna)):
-            pass
-        score = 
+            profile = constructProbabilityProfile(motifs[:j])
+            motifs[j], _ = probableKmer(dna[j], k, profile)
+        score = scoreMotifs(motifs)
         if score < motifScore:
             motifScore = score
             bestMotifs = motifs
-    return bestMotifs
+    return bestMotifs, motifScore
 
 if __name__ == '__main__':
     profile = constructProbabilityProfile(['CGTA', 'CAGA', 'TTAA', 'CACA'])
