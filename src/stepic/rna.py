@@ -4,9 +4,9 @@ Created on 24 Oct 2013
 @author: Andy Bowes
 '''
 
-from itertools import takewhile,product
+from itertools import takewhile, product
 from re import findall
-from collections import defaultdict
+from collections import defaultdict, Counter
 from dna import reverseComplement
 from copy import copy
 
@@ -39,43 +39,43 @@ def proteinTranslation(rna):
     """
     Translate RNA into a Protein
     """
-    protein = [rnaCoding[codon] for codon in takewhile( lambda codon: rnaCoding[codon] != 'STOP', findall(r'...', rna)) ]
+    protein = [rnaCoding[codon] for codon in takewhile(lambda codon: rnaCoding[codon] != 'STOP', findall(r'...', rna)) ]
     return "".join(protein)
 
-def peptideEncoding(dna,protein):
+def peptideEncoding(dna, protein):
     """
     Find motifs in the positions dna which generate the protein
     """
     reverseLookup = defaultdict(list)
-    for k,v in rnaCoding.iteritems():reverseLookup[v].append(k.replace('U', 'T'))
+    for k, v in rnaCoding.iteritems():reverseLookup[v].append(k.replace('U', 'T'))
     motifs = [ "".join(prod) for prod in product(*[reverseLookup[p] for p in protein])]
     motifs += [reverseComplement(m) for m in motifs]
-    motifLength = 3*len(protein)
-    return [dna[i:i+motifLength] for i in range(len(dna)-motifLength) if dna[i:i+motifLength] in motifs]
-  
+    motifLength = 3 * len(protein)
+    return [dna[i:i + motifLength] for i in range(len(dna) - motifLength) if dna[i:i + motifLength] in motifs]
+
 def cyclicsubpeptides(protein):
-    doubleProtein = protein*2
-    return [doubleProtein[i:i+j] for i in range(len(protein)) for j in range(1,len(protein)) ]
+    doubleProtein = protein * 2
+    return [doubleProtein[i:i + j] for i in range(len(protein)) for j in range(1, len(protein)) ]
 
 def cyclicSpectrum(protein):
-    peptides = cyclicsubpeptides(protein) + ['',protein]
+    peptides = cyclicsubpeptides(protein) + ['', protein]
     spectrum = [sum([aminoAcids[a] for a in p]) for p in peptides]
-    return sorted( spectrum) 
+    return sorted(spectrum)
 
 def subpeptides(protein):
-    return [protein[i:i+j] for i in range(len(protein)) for j in range(1,len(protein)-i) ]
+    return [protein[i:i + j] for i in range(len(protein)) for j in range(1, len(protein) - i) ]
 
 def linearSpectrum(protein):
-    peptides = subpeptides(protein) + ['',protein]
+    peptides = subpeptides(protein) + ['', protein]
     spectrum = [sum([aminoAcids[a] for a in p]) for p in peptides]
-    return sorted( spectrum) 
+    return sorted(spectrum)
 
 def cyclopeptideSequencing(spectrum):
-    p = dict(zip(aminoAcids.values(),aminoAcids.keys()))
+    p = dict(zip(aminoAcids.values(), aminoAcids.keys()))
     available = [p[s] for s in spectrum if s in aminoAcids.itervalues()]
     peptides = available
     while len(peptides) > 0:
-        peptides = list(set(["".join(p) for p in product(peptides,available)]))
+        peptides = list(set(["".join(p) for p in product(peptides, available)]))
         print 'Before:' + ",".join(peptides)
         for peptide in copy(peptides):
             peptideSpectrum = linearSpectrum(peptide)
@@ -85,17 +85,17 @@ def cyclopeptideSequencing(spectrum):
             elif not sublist(peptideSpectrum, spectrum):
                 peptides.remove(peptide)
         print 'After:' + ",".join(peptides)
-        
+
 def peptideWeight(peptide):
     return sum([aminoAcids[a] for a in peptide])
 
 def peptideToMassChain(peptide):
     return '-'.join(str(aminoAcids[a]) for a in peptide)
 
-def score(list1,list2):
+def score(list1, list2):
     occurs2 = occurs(list2)
     occurs1 = occurs(list1)
-    return sum([min(occurs1[k],occurs2[k]) for k,_ in occurs1.iteritems()])
+    return sum([min(occurs1[k], occurs2[k]) for k, _ in occurs1.iteritems()])
 
 def occurs(inList):
     occurs = defaultdict(int)
@@ -106,25 +106,25 @@ def sublist(list1, list2):
     occurs2 = occurs(list2)
     return all([v <= occurs2[k] for k, v in occurs(list1).iteritems()])
 
-                
+
 def leaderboardCyclopeptideSequencing(spectrum, n, p=None):
-    
-    def cut(leaderboard,n):
+
+    def cut(leaderboard, n):
         leaders = []
-        scores = sorted(leaderboard.iterkeys(),key=lambda x: x,reverse=True)
-        for s in takewhile(lambda _: len(leaders)<n,scores):
+        scores = sorted(leaderboard.iterkeys(), key=lambda x: x, reverse=True)
+        for s in takewhile(lambda _: len(leaders) < n, scores):
             leaders.extend(leaderboard[s])
         return leaders
 
     if not p:
-        p = dict(zip(aminoAcids.values(),aminoAcids.keys()))
+        p = dict(zip(aminoAcids.values(), aminoAcids.keys()))
     available = list(p.itervalues())
     peptides = available
     bestScore = 0
     bestPeptides = []
     while len(peptides) > 0:
         leaderboard = defaultdict(list)
-        peptides = ["".join(p) for p in product(peptides,available)]
+        peptides = ["".join(p) for p in product(peptides, available)]
 #        print 'Before:' + ",".join(peptides)
         for peptide in copy(peptides):
             weight = peptideWeight(peptide)
@@ -142,38 +142,38 @@ def leaderboardCyclopeptideSequencing(spectrum, n, p=None):
                         bestPeptides += peptide
                 leaderboard[peptideScore].append(peptide)
         # Take the highest N scores from the round
-        peptides = cut(leaderboard,n)
+        peptides = cut(leaderboard, n)
 #        print 'After:' + ",".join(peptides)
     print bestScore
     print cyclicSpectrum(bestPeptides[0])
     print spectrum
-    return peptideToMassChain(bestPeptides[0])        
+    return peptideToMassChain(bestPeptides[0])
 
 def convolutionCyclopeptideSequencing(spectrum, m, n):
     """
     
     """
-    def cut(convolution,m):
+    def cut(convolution, m):
         leaders = []
-        counts = sorted(set(convolution.itervalues()),key=lambda x: x,reverse=True)
-        for s in takewhile(lambda _: len(leaders)<m,counts):
+        counts = sorted(set(convolution.itervalues()), key=lambda x: x, reverse=True)
+        for s in takewhile(lambda _: len(leaders) < m, counts):
             leaders.extend([mass for mass, c in convolution.iteritems() if c == s and mass >= 57 and mass < 200 ])
         return leaders
-    
+
     conv = defaultdict(int)
-    for i in range(len(spectrum)-1):
+    for i in range(len(spectrum) - 1):
         for j in range(i, len(spectrum)):
-            conv[spectrum[j]-spectrum[i]] += 1
+            conv[spectrum[j] - spectrum[i]] += 1
 #    aminoAcidMasses = [x for x in aminoAcids.itervalues()]
-    masses = cut(conv,m)
-    filteredAmino = {k:v for k,v in aminoAcids.iteritems() if v in masses}
-    p = dict(zip(filteredAmino.values(),filteredAmino.keys()))
+    masses = cut(conv, m)
+    filteredAmino = {k:v for k, v in aminoAcids.iteritems() if v in masses}
+    p = dict(zip(filteredAmino.values(), filteredAmino.keys()))
     return leaderboardCyclopeptideSequencing(spectrum, n, p)
-    
-    
+
+
 
 
 if __name__ == "__main__":
 #    print ' '.join(sorted(["-".join(str(aminoAcids[x]) for x in pep) for pep in cyclopeptideSequencing([0,113,128,186,241,299,314,427])]))
 #    print leaderboardCyclopeptideSequencing([0,71,113,129,147,200,218,260,313,331,347,389,460],20)
-    print convolutionCyclopeptideSequencing([0,57,57,71,99,129,137,170,186,194,208,228,265,285,299,307,323,356,364,394,422,493], 20, 60)
+    print convolutionCyclopeptideSequencing([0, 57, 57, 71, 99, 129, 137, 170, 186, 194, 208, 228, 265, 285, 299, 307, 323, 356, 364, 394, 422, 493], 20, 60)

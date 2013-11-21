@@ -14,13 +14,13 @@ class Test(unittest.TestCase):
 
     def testCycloPeptideSequencing(self):
         with open('data/cyclopeptidesequencing.txt') as fp:
-            with open('data/cyclopeptidesequencing.out','w') as out:
+            with open('data/cyclopeptidesequencing.out', 'w') as out:
                 spectrum = [ int(x) for x in fp.readline().split()]
                 out.write(" ".join(list(set(cyclopeptideSequencing(spectrum)))))
 
     def testSpectrum(self):
         print ' '.join([str(m) for m in linearSpectrum('QMTNAQAN')])
-    
+
     def testOccursCheck(self):
         spectrum = self.getSpectrum()
         for pep in [ 'QMAT', 'NAQ', 'TNA']:
@@ -31,13 +31,13 @@ class Test(unittest.TestCase):
     def testSpectrumsMatch(self):
         spectrum = self.getSpectrum()
         self.assertEquals(cyclicSpectrum('QMTNAQAN'), spectrum)
-        
+
     def testLeaderBoardCyclopeptideSequencing(self):
-        with open('data/leaderboardcyclopeptide.txt') as fp:
+        with open('data/leaderboardcyclopeptide2.txt') as fp:
             n = int(fp.readline().strip())
             spectrum = sorted([ int(x) for x in fp.readline().split()])
             print leaderboardCyclopeptideSequencing(spectrum, n)
-    
+
     def testConvolutionCyclicSequence(self):
         with open('data/convolutionCyclicSequence.txt') as fp:
             m = int(fp.readline().strip())
@@ -46,5 +46,5 @@ class Test(unittest.TestCase):
             print convolutionCyclopeptideSequencing(spectrum, m, n)
 
 if __name__ == "__main__":
-    #import sys;sys.argv = ['', 'Test.testName']
+    # import sys;sys.argv = ['', 'Test.testName']
     unittest.main()

@@ -22,19 +22,19 @@ def findMotifLocations(dna, motif):
 
 def findRegexLocations(dna, regex):
     return [ match.start() for match in finditer(regex, dna)]
-    
+
 def buildKmerTree(dna, kmerLength):
     """
     Build a Suffix Tree which contains all of the Kmers in the DNA
     """
     root = Edge('')
-    for i in range(len(dna)-kmerLength):#
-        root.addEdge(dna[i:i+kmerLength]+'$', i)
+    for i in range(len(dna) - kmerLength):  #
+        root.addEdge(dna[i:i + kmerLength] + '$', i)
     return root
 
 if __name__ == '__main__':
 #    tree = buildKmerTree('CGCCCGAATCCAGAACGCATTCCCATATTTCGGGACCACTGGCCTCCACGGTACGGACGTCAATCAAAT', 4)
-    #tree.doWalk()
-    #kmers = product(['A','C','G','T'], repeat=9)
-    #print len(list(kmers))
+    # tree.doWalk()
+    # kmers = product(['A','C','G','T'], repeat=9)
+    # print len(list(kmers))
     print " ".join([ str(s) for s in sorted(findApproximateMatches('ATTCTGGA', 3, 'CGCCCGAATCCAGAACGCATTCCCATATTTCGGGACCACTGGCCTCCACGGTACGGACGTCAATCAAAT'))])
