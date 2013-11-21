@@ -4,7 +4,8 @@ Created on 16 Nov 2013
 @author: andy
 '''
 import unittest
-from stepic.motif import motifEnumeration, medianString, probableKmer, greedyMotifSearch, randomisedMotifSearch
+from stepic.motif import motifEnumeration, medianString, probableKmer, greedyMotifSearch, \
+     randomisedMotifSearch, gibbsSampling
 
 class MotifTest(unittest.TestCase):
 
@@ -92,6 +93,22 @@ class MotifTest(unittest.TestCase):
             for motif in bestMotifs:
                 print motif
             print bestScore
+
+    def testGibbsSamplingFromFile(self):
+        """
+        Gibbs Sampling from file
+        """
+        with open('data/gibbsSampling.txt') as fp:
+            vals = [int(x) for x in fp.readline().split()]
+            k = vals[0]
+            n = vals[2]
+            dna = [seq.strip() for seq in fp.readlines()]
+            bestMotifs, bestScore = gibbsSampling(dna, k, n, 40)
+            print 'Best Motifs'
+            for motif in bestMotifs:
+                print motif
+            print bestScore
+
 
 
 if __name__ == "__main__":

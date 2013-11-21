@@ -3,9 +3,9 @@ Created on 16 Nov 2013
 
 @author: Andy Bowes
 '''
-from itertools import permutations, product
+from itertools import permutations, product, takewhile
 from copy import copy
-from random import randint
+from random import randint, random
 
 def getKmers(dna, k):
     """
@@ -176,6 +176,18 @@ def gibbsSampling(dna, k, n, t):
     """
     Perform a Gibbs Sampling Search stating with a random set of Motifs
     """
+    def randomKmer(seq, k, profile):
+        """
+        Given a seq pick a random kmer based on the probability profile 
+        """
+        kmerProbs = [(kmer, kmerProb(kmer, profile))  for kmer in getKmers(seq, k)]
+        totalProbability = sum([prob for _, prob in kmerProbs])
+        randValue = random() * totalProbability
+        for kp in kmerProbs:
+            randValue -= kp[1]
+            if randValue <= 0.0:
+                return kp[0]
+
     def doSearch(dna, k, n):
         motifs = [ '' for _ in range(len(dna))]
         for i in xrange(len(dna)):
@@ -188,7 +200,7 @@ def gibbsSampling(dna, k, n, t):
             profileMotifs = copy(motifs)
             profileMotifs.pop(i)
             profile = constructProbabilityProfile(profileMotifs, True)
-            motifs[i], _ = probableKmer(dna[i], k, profile)
+            motifs[i] = randomKmer(dna[i], k, profile)
             score = scoreMotifs(motifs)
             if score < motifScore:
                 motifScore = score
@@ -208,10 +220,10 @@ if __name__ == '__main__':
 #    prof = constructProbabilityProfile(['GACC'])
 #    for l in prof:
 #        print l
-    theMotifs, score = randomisedMotifSearch(['CGCCCCTCTCGGGGGTGTTCAGTAAACGGCCA',
+    theMotifs, score = gibbsSampling(['CGCCCCTCTCGGGGGTGTTCAGTAAACGGCCA',
                                               'GGGCGAGGTATGTGTAAGTGCCAAGGTGCCAG',
                                               'TAGTACCGAGACCGAAAGAAGTATACAGGCGT',
                                               'TAGATCAAGTTTCAGGTGCACGTCGGTGAACC',
                                               'AATCCACCAGCTCCACGTGCAATGTTGGCCTA'],
-                                              8, 500)
+                                              8, 20, 1000)
     print theMotifs, score
