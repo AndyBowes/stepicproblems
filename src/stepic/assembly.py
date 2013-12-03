@@ -82,16 +82,21 @@ def stringReconstruction(adjacencyList):
     kmers = eulerianPath(adjacencyList)
     return kmers[0][:-1] + "".join([x[-1] for x in kmers])
 
+def generatePairedReads(dna, k, d):
+    return sorted(["|".join([dna[i:i + k], dna[i + k + d:i + k + k + d]]) for i in range(len(dna) - (2 * k + d) + 1)])
+
 def universalString(n):
     elements = [ "".join(p) for p in  product(['0', '1'], repeat=n)]
     adjacencyList = defaultdict(list)
     for e in elements:
         adjacencyList[e[:-1]].append(e[1:])
-    return eulerianCycle(adjacencyList)
+    kmers = eulerianCycle(adjacencyList)
+    return "".join([x[-1] for x in kmers[1:]])
 
 if __name__ == '__main__':  # pragma: no cover
 #    print debruinGraph('AAGATTCTCTAC', 4)
 #    print "->".join([str(x) for x in eulerianCycle({0:[3], 1:[0], 2:[1, 6], 3:[2], 4:[2], 5:[4], 6:[5, 8], 7:[9], 8:[7], 9:[6]})])
 #    print "->".join([str(x) for x in eulerianPath({0:[2], 1:[3], 2:[1], 3:[0, 4], 6:[3, 7], 7:[8], 8:[9], 9:[6]})])
 #    print stringReconstruction({'CTT':['TTA'], 'ACC':['CCA'], 'TAC':['ACC'], 'GGC':['GCT'], 'GCT':['CTT'], 'TTA':['TAC']})
-    print universalString(16)
+    print universalString(18)
+#    print generatePairedReads('TAATGCCATGGGATGTT', 3, 2)
