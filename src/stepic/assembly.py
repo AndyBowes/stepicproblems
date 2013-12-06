@@ -93,10 +93,45 @@ def universalString(n):
     kmers = eulerianCycle(adjacencyList)
     return "".join([x[-1] for x in kmers[1:]])
 
+def pairedReads(dist, pairs):
+    """
+    Handle Paired Reads as a joined DeBruijn Graph
+    """
+    # Build Adjacency List from the paired reads
+    adjacencyList = defaultdict(list)
+    kmerLength = len(pairs[0][0])
+    for pair in pairs:
+        key = pair[0][:-1] + '|' + pair[1][:-1]
+        value = pair[0][1:] + '|' + pair[1][1:]
+        adjacencyList[key].append(value)
+
+    # Get the Eulerian Path through the paired reads
+    path = eulerianPath(adjacencyList)
+
+    # Reconstruct the Sequence from the Eulerian Path
+    prefix = "".join([x[0] for x in path])
+    suffix = "".join([x[kmerLength] for x in path]) + path[-1][-dist:]
+    return prefix + suffix[-(2 * (kmerLength - 1) + dist):]
+
+def contigs(adjacencyList):
+    """
+    Extract the Contigs from an adjacency list
+    Each alterive branch in a Eulerian Path forms a Contig
+    1. build a de bruijn graph from the given dataset with k of the read length - 1. e.g) k of the Sample input is 2. ATC: AT -> TC
+    2. calculate the indegree and the outdegree for all vertices(or nodes) if you have not computed yet. e.g) {ATC, ATG, TGA} => AT(0,2), GA(1,0), TC(1,0), TG(1,1)
+    3. select vertices which agree with the condition, 1 != vertex.indegree || 1 < vertex.outdegree. e.g) AT, GA, TC
+    4. for each vertex, find a unique path which has only a 1-indegree and 1-outdegree vertex in its construction.
+    6. convert each path to a contig.
+    7. remove edges which have 1-indegree and 1-outdegree vertex.
+    8. sort out the contigs in lexicographical order.
+    """
+    pass
+
 if __name__ == '__main__':  # pragma: no cover
 #    print debruinGraph('AAGATTCTCTAC', 4)
 #    print "->".join([str(x) for x in eulerianCycle({0:[3], 1:[0], 2:[1, 6], 3:[2], 4:[2], 5:[4], 6:[5, 8], 7:[9], 8:[7], 9:[6]})])
 #    print "->".join([str(x) for x in eulerianPath({0:[2], 1:[3], 2:[1], 3:[0, 4], 6:[3, 7], 7:[8], 8:[9], 9:[6]})])
 #    print stringReconstruction({'CTT':['TTA'], 'ACC':['CCA'], 'TAC':['ACC'], 'GGC':['GCT'], 'GCT':['CTT'], 'TTA':['TAC']})
-    print universalString(18)
+#    print universalString(18)
 #    print generatePairedReads('TAATGCCATGGGATGTT', 3, 2)
+    print pairedReads(2, [['GAGA', 'TTGA'], ['TCGT', 'GATG'], ['CGTG', 'ATGT'], ['TGGT', 'TGAG'], ['GTGA', 'TGTT'], ['GTGG', 'GTGA'], ['TGAG', 'GTTG'], ['GGTC', 'GAGA'], ['GTCG', 'AGAT']])

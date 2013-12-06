@@ -4,7 +4,8 @@ Created on 25 Nov 2013
 
 """
 import unittest
-from stepic.assembly import stringComposition, overlapGraph, debruinGraph, debruinGraphFromKmers, eulerianCycle, eulerianPath, stringReconstruction
+from stepic.assembly import stringComposition, overlapGraph, debruinGraph, debruinGraphFromKmers, \
+     eulerianCycle, eulerianPath, stringReconstruction, pairedReads
 
 class AssemblyTest(unittest.TestCase):
 
@@ -47,6 +48,12 @@ class AssemblyTest(unittest.TestCase):
         with open('data/assembly/stringReconstruction.txt') as fp:
             nodes = { n[0] : [x for x in n[1].split(',')] for n in [l.strip().split(' -> ') for l in fp.readlines()]}
             print stringReconstruction(nodes)
+
+    def testPairedReads(self):
+        with open('data/assembly/pairedReads.txt') as fp:
+            dist = int(fp.readline())
+            pairs = [l.strip().split('|') for l in fp.readlines()]
+            print pairedReads(dist, pairs)
 
 
 
