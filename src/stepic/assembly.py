@@ -3,7 +3,8 @@ Created on 25 Nov 2013
 
 """
 from collections import defaultdict, deque
-from itertools import product
+from itertools import product, repeat
+from copy import copy
 
 def stringComposition(seq, kmerLength):
     return sorted([seq[i:i + kmerLength] for i in range((len(seq) + 1) - kmerLength)])
@@ -16,6 +17,12 @@ def overlapGraph(kmers):
 
 def debruinGraph(seq, kmerLength):
     return debruinGraphFromKmers([seq[i:i + kmerLength] for i in range((len(seq) + 1) - kmerLength)])
+
+def adjacencyListFromKmers(kmers):
+    adjacencyList = defaultdict(list)
+    for kmer in kmers:
+        adjacencyList[kmer[:-1]].append(kmer[1:])
+    return adjacencyList
 
 def debruinGraphFromKmers(kmers):
     adjacencyList = defaultdict(list)
@@ -110,10 +117,10 @@ def pairedReads(dist, pairs):
 
     # Reconstruct the Sequence from the Eulerian Path
     prefix = "".join([x[0] for x in path])
-    suffix = "".join([x[kmerLength] for x in path]) + path[-1][-dist:]
+    suffix = "".join([x[-1] for x in path])
     return prefix + suffix[-(2 * (kmerLength - 1) + dist):]
 
-def contigs(adjacencyList):
+def contigs(kmers):
     """
     Extract the Contigs from an adjacency list
     Each alterive branch in a Eulerian Path forms a Contig
@@ -125,7 +132,22 @@ def contigs(adjacencyList):
     7. remove edges which have 1-indegree and 1-outdegree vertex.
     8. sort out the contigs in lexicographical order.
     """
-    pass
+    adjacencyList = adjacencyListFromKmers(kmers)
+    kmerLength = len(kmers[0])
+    vertexCount = defaultdict(lambda: [0, 0])
+    for k, v in adjacencyList.iteritems():
+        vertexCount[k][1] = len(v)
+        for n in v:
+            vertexCount[n][0] += 1
+    starts = [vertex for vertex, vc in vertexCount.iteritems() if vc[0] != 1 or vc[1] > 1]
+    # For each start build the path whilst the exit count == 1
+    pathRoots = [s + v[-1] for s in starts for v in adjacencyList[s]]
+    for p in pathRoots:
+        path = copy(p)
+        while vertexCount[path[-(kmerLength - 1):]][1] == 1 and vertexCount[path[-(kmerLength - 1):]][0] == 1 :
+            path += adjacencyList[path[-(kmerLength - 1):]][0][-1]
+        yield path
+
 
 if __name__ == '__main__':  # pragma: no cover
 #    print debruinGraph('AAGATTCTCTAC', 4)
@@ -134,4 +156,5 @@ if __name__ == '__main__':  # pragma: no cover
 #    print stringReconstruction({'CTT':['TTA'], 'ACC':['CCA'], 'TAC':['ACC'], 'GGC':['GCT'], 'GCT':['CTT'], 'TTA':['TAC']})
 #    print universalString(18)
 #    print generatePairedReads('TAATGCCATGGGATGTT', 3, 2)
-    print pairedReads(2, [['GAGA', 'TTGA'], ['TCGT', 'GATG'], ['CGTG', 'ATGT'], ['TGGT', 'TGAG'], ['GTGA', 'TGTT'], ['GTGG', 'GTGA'], ['TGAG', 'GTTG'], ['GGTC', 'GAGA'], ['GTCG', 'AGAT']])
+#    print pairedReads(2, [['GAGA', 'TTGA'], ['TCGT', 'GATG'], ['CGTG', 'ATGT'], ['TGGT', 'TGAG'], ['GTGA', 'TGTT'], ['GTGG', 'GTGA'], ['TGAG', 'GTTG'], ['GGTC', 'GAGA'], ['GTCG', 'AGAT']])
+    print " ".join(contigs(['ATG', 'ATG', 'TGT', 'TGG', 'CAT', 'GGA', 'GAT', 'AGA']))
