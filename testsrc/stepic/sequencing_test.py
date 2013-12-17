@@ -4,7 +4,8 @@ Created on 11 Dec 2013
 
 """
 import unittest
-from stepic.sequencing import manhatten
+from collections import defaultdict
+from stepic.sequencing import manhatten, longestPath, localAlignment, PAM250
 
 class SequencingTest(unittest.TestCase):
 
@@ -24,6 +25,27 @@ class SequencingTest(unittest.TestCase):
             for i in range(n + 1):
                 right.append([int(x) for x in fp.readline().strip().split()])
             self.assertEqual(85, manhatten(m, n, down, right))
+
+    def testLongestPath(self):
+        with open('data/sequencing/longestdag.txt') as fp:
+            start = int(fp.readline().strip())
+            finish = int(fp.readline().strip())
+            nodes = defaultdict(list)
+            for line in fp.readlines():
+                elements = line.split('->')
+                values = [int(x) for x in elements[1].split(':')]
+                nodes[int(elements[0])].append((values[0], values[1]))
+            maxLength, path = longestPath(start, finish, nodes)
+            print maxLength
+            print '->'.join([str(x) for x in path])
+
+    def testLocalAlignment(self):
+        with open('data/sequencing/localAlignment.txt') as fp:
+            seqs = [l.strip() for l in fp.readlines()]
+            score, align1, align2 = localAlignment(seqs[0], seqs[1], PAM250)
+            print score
+            print align1
+            print align2
 
 if __name__ == "__main__":
     # import sys;sys.argv = ['', 'Test.testName']
