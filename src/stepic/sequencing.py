@@ -200,10 +200,16 @@ def localAlignment(sequence1, sequence2, scoringMatrix=None, indelPenalty=5):
                 bestScore = score[y][x][0]
                 maxLocation = (y, x)
 
+    align1, align2 = _backtrackAlignment((maxLocation[1], maxLocation[0]), score, sequence1, sequence2)
+    return bestScore, align1, align2
 
-    # Need to find the location of the highest Score in the Matrix and use that as the starting point
-    x = maxLocation[1]
-    y = maxLocation[0]
+
+def _backtrackAlignment(start, score, sequence1, sequence2):
+    """
+    Backtrack from the start point to HOME 
+    """
+    x = start[0]
+    y = start[1]
     align1 = ''
     align2 = ''
     while score[y][x][1] != HOME:
@@ -221,21 +227,138 @@ def localAlignment(sequence1, sequence2, scoringMatrix=None, indelPenalty=5):
             x -= 1
             align1 = sequence1[x] + align1
             align2 = '-' + align2
-    return bestScore, align1, align2
+    return align1, align2
 
+
+def editDistance(sequence1, sequence2):
+    """
+    Calculate the minimum Edit Distance between 2 sequences
+    """
+    s1Length = len(sequence1)
+    s2Length = len(sequence2)
+    score = [ [i] + list(repeat(0, s1Length)) for i in range(s2Length + 1)]
+    for i in range(1, s1Length + 1):
+        score[0][i] = i
+
+    for x in xrange(1, s1Length + 1):
+        for y in xrange(1, s2Length + 1):
+            cellScores = [ score[y - 1][x - 1] + (0 if sequence1[x - 1] == sequence2[y - 1] else 1),
+                           score[y][x - 1] + 1,
+                           score[y - 1][x] + 1]
+            score[y][x] = min(cellScores)
+    return score[s2Length][s1Length]
+
+def fittingAlignment(sequence1, sequence2):
+    """
+    Fitting Alignment
+    Find local alignment of sequence2 within sequence1. There is zero penalty at either end
+    of sequence2.
+    Just need to find the max score at the end of sequence2 to locate the last 
+    """
+    s1Length = len(sequence1)
+    s2Length = len(sequence2)
+    score = [[(-i, DOWN)] + list(repeat((0, 0), s1Length)) for i in range(s2Length + 1)]
+    for i in range(1, s1Length + 1):
+        score[0][i] = (0, HOME)
+    score[0][0] = (0, HOME)
+
+    for x in xrange(1, s1Length + 1):
+        for y in xrange(1, s2Length + 1):
+            diagScore = 1 if sequence1[x - 1] == sequence2[y - 1] else -1
+#             cellScores = [ (score[y][x - 1][0] - 1, RIGHT),
+#                            (score[y - 1][x][0] - 1, DOWN),
+#                            (score[y - 1][x - 1][0] + diagScore, DIAG),
+#                            (0, HOME)]
+            cellScores = [ (score[y - 1][x - 1][0] + diagScore, DIAG),
+                           (score[y][x - 1][0] - 1, RIGHT),
+                           (score[y - 1][x][0] - 1, DOWN)
+                           ]
+            score[y][x] = max(cellScores, key=lambda t: t[0])
+
+    bestCell = max(enumerate(score[-1]), key=lambda t : t[1][0])
+    start = (bestCell[0], s2Length)
+    bestscore = bestCell[1][0]
+    align1, align2 = _backtrackAlignment(start, score, sequence1, sequence2)
+    return bestscore, align1, align2
+
+
+
+def overlapAlignment(sequence1, sequence2):
+    """
+    Overlap Alignment take the end of 1 sequence and the start of the other
+    There is a zero penalty at the start of 1 string and a zero penalty at the end of the other.    
+    """
+    s1Length = len(sequence1)
+    s2Length = len(sequence2)
+    score = [[(-i * 2, DOWN)] + list(repeat((0, 0), s1Length)) for i in range(s2Length + 1)]
+    for i in range(1, s1Length + 1):
+        score[0][i] = (0, HOME)
+    score[0][0] = (0, HOME)
+
+    for x in xrange(1, s1Length + 1):
+        for y in xrange(1, s2Length + 1):
+            diagScore = 1 if sequence1[x - 1] == sequence2[y - 1] else -2
+#             cellScores = [ (score[y][x - 1][0] - 1, RIGHT),
+#                            (score[y - 1][x][0] - 1, DOWN),
+#                            (score[y - 1][x - 1][0] + diagScore, DIAG),
+#                            (0, HOME)]
+            cellScores = [ (score[y - 1][x - 1][0] + diagScore, DIAG),
+                           (score[y][x - 1][0] - 2, RIGHT),
+                           (score[y - 1][x][0] - 2, DOWN)]
+            score[y][x] = max(cellScores, key=lambda t: t[0])
+
+    bestscore = -1
+    bestY = -1
+    for i in range(1, s2Length):
+        if score[i][-1][0] > bestscore:
+            bestscore = score[i][-1][0]
+            bestY = i
+
+    start = (s1Length, bestY)
+    align1, align2 = _backtrackAlignment(start, score, sequence1, sequence2)
+    return bestscore, align1, align2
+
+
+def affineAlignment(sequence1, sequence2, indelPenalty=1, openPenalty=11, scoringMatrix=None):
+    """
+    Perform a Global Alignment between 2 Sequences with Affine Gap Penalties
+    Return the best score and the 2 Aligned Sequences
+    """
+    if scoringMatrix == None:
+        scoringMatrix = BLOSUM62
+
+    s1Length = len(sequence1)
+    s2Length = len(sequence2)
+    score = [[(-i * indelPenalty, DOWN)] + list(repeat((0, 0), s1Length)) for i in range(s2Length + 1)]
+    for i in range(1, s1Length + 1):
+        score[0][i] = (-i * indelPenalty, RIGHT)
+    score[0][0] = (0, HOME)
+
+    for x in xrange(1, s1Length + 1):
+        for y in xrange(1, s2Length + 1):
+            rightPenalty = indelPenalty if score[y][x - 1][1] == RIGHT else openPenalty
+            downPenalty = indelPenalty if score[y - 1][x][1] == DOWN else openPenalty
+            cellScores = [ (score[y - 1][x - 1][0] + scoringMatrix[sequence1[x - 1]][sequence2[y - 1]], DIAG),
+                           (score[y][x - 1][0] - rightPenalty, RIGHT),
+                           (score[y - 1][x][0] - downPenalty, DOWN)]
+            score[y][x] = max(cellScores, key=lambda t: t[0])
+
+    bestScore = score[s2Length][s1Length][0]
+    start = (s1Length, s2Length)
+    align1, align2 = _backtrackAlignment(start, score, sequence1, sequence2)
+    return bestScore, align1, align2
 
 if __name__ == '__main__':  # pragma: no cover
 #    print dpChange(18996, [32, 22, 5, 3, 1])
 #    longestCommonSubsequence('GATCTAAATGAGACTTCATTGCAAGCAGTTCTGAGACCAGATACCGCCGCAGAGAAGCCCCCGGATACTGTTTAGATGGCGTGCACTGGACGTGATGCAAAAGTGAGCAGCCGTCCGATTCATCATTAGGACTGAATATCTCTCAATCGAAGGCAGAGCTCCCTATGGCGCACAGGCCTACATATGCGCGTAGAGTTGCAGTGCATGTCTCAGTGTCGCTGCATGACATCTATCCCCACAGGTTCTCTTGGTTGATGGATGCCATAGCGGCAGCAATGTAGCATTTTCCTGGTGCGAAAGATCCTCCATAGAGCTGGCGATTGCCCTTGTCTCCTATACTTGAGGGGGACCGATCCCTGGAGGCTCGGAATAGGACGCCACTGTAGCGGCTGACTCGGACAAAAGCGCCGGAAGATCCTTGGCACCGATGCCACTTTGCCCTCGCTTAATAGCTACGTCCACGACCGCGAATGACTGGCGAATCTTTACTTGGTTTACCAAAATTTCGGAAAAGCGTGTGTTAGCATAACGGGCTAATTAAATTCGTTGACACATAGATGCACCCTCAACCCTTACAAAACGGGCGTCGGTTTGCAGAGGCAGCTAAAGGAGTGACAGTGGGGCCCGACTCACTATAAAGGGTAAAAGACGGGGACGTCTTAAACTTGGATACGCAAACAGGTGGATGGCCAGTTCAGTTGACCGTATGGCCATTGGTGGATCATACCACGACGACCGAAGATGTAATGGTATATAACGCCATGGCTACCCTTCTTAGATTCTTAACTGCAAGATCCAGTAATGCAGGTCTTACGCTGCTACGCTCCAAAAGAGACCATACTGGGTGTATGCTTACAGTGAAGATACCACTATTTGGTGCTCGCCAGATGGTTCTTCTGTGAATCGCGTCTAGTGACGACGTTTCATTTGCT',
 # 'ATGTGGTGTTATCCCACCCCAGCGAATACTAGGTCTGTAGGGCGGTAGGACGTCACTGGGGGTCACACCTCATCGCACGACGCCTTGCATGTGGAGAATCGATCCTTTAGATTTCCGTGTACTCGGCCGAGTTGGTCGCACAGGGTAAAACGGTGGAAGTAAACTCAGAGATAGGGTGTTCTAAGTATATTTCTCGGCTCAGTGACCAAGACCCTCGTTGCCTCTATGCTACGGATTCGGGGGGCGTGATTCACTGTTCCCTCAGCAAAAGCGGCACCATCGGTGCGACTGGGCGCCACCGCTTACATCTAGCTGGGGCAGCGTACGTGACTACTCTGCGTATCTTTCGTAAACACGTATCATCAGTCCTAACGCGACTGATAGCCGTGCCTTAGGAAGCCTTCTGAGCTTCATTCCTAGGCTCGGCTCCGCAGATTGATATGTAAGCGCTTGAAAACACCCCTCGCGCGCTCCCCAGTCGACGTAAACAACTTCAAACCGATAGAACGCCACCTGGTGGCAGCTGGGTGGCTGCACTATACGGGGGTCAGGTATACACTTGCGTGCTACGTCTGGTGGTGAGTCGCGACAACAACCCTAATAGGTGGTGCCATCAGCCGCATTAATTAGGCGTGGATGCGTAGAACTTTGAAAGCCTGTCCTTGAGTACCCGGGGCCGAGAAGAGCAGCGTTTACTTCAAGTAAAGCAGGGTGGAACTATTGGGTGTCACCCACCCCAGTTGGTACGCAAGTTAAGATCTTCGGTAGAGTCGCCATCATTCAATTAATTAGTGATCGTCAGGCCTACGAACCGGATATGATAAC')
 #    print manhatten(4, 4, [[1, 0, 2, 4, 3], [4, 6, 5, 2, 1], [4, 4, 5, 2, 1], [5, 6, 8, 5, 3]],
-#                    [[3, 2, 4, 0], [3, 2, 4, 2], [0, 7, 3, 3], [3, 3, 0, 2], [1, 3, 2, 2]])
+#                    [[3, 2, 4, 0], [3, 2, 4, 2], [0, 7, 3,u 3], [3, 3, 0, 2], [1, 3, 2, 2]])
 
 #    print longestPath(0, 4, {0:[(1, 7), (2, 4)], 2:[(3, 2)], 1:[(4, 1)], 3:[(4, 3)], 4:[]})
 #    print globalAlignment('MNCNDDNFLYFMEHITTQEVYWFMSCAVLGQRGWKCNHFSAADPVPYLPHCHRDSGGQEAFNVVMLQAFLNFNIHEFWTDSMCRGGRQRNAHQTHATRFFKQIHMDCMVTAIFWCKMLAVYPLLYQGIQSTAHCTEPYLSKKMKMYEAFMLKMYKICKHKPDHFTEPDVRVLPESLVMPTTRKTYCPCKKPQKSRRMHMRALGEFKWPDMGSYQETQTEHWGYNWLPEQSTRKYIVQRCEVCEYMSNAAKIGQLSEHNENWPIVLAYQVREVGLAEMFTDLSWFVGHDWLGVTQRWDLWDPINWMNMLFPDDRAEYIYNCWCIRYSRYGPETYCFTTFSVGMHGCEMKQSGKGLPKDLSAFVIQHYVPILKRTPLQWGWPMRSGENREWGVNFKSCFMIWMSEFFTDPRASPIRVLSIWSKIHQQILLLNLNYEIMMYYSPWHVWKWQAESKLRCIIEVRPSGMIQMPDAAYIMIFNLQKFLSIFSDSQLFNIECHLDPGGMMEPPSIQKFSMIHNFAEKMHRMNLENKVDSLYCDSQGMTHKNLGMNVHAKHGKPYNSLNYIPQMCDFMFKDRQTMCAMYPLTQDPSFQRKRNQPCFARHHLENRRNFPTQNAIFPAYEMTGSVIMFPETVRPFQADSDYWYWDQKFREAQTFVVLSATSALRTQKQTWVGEYDKEKKRQPIWQEGFLHVIFCFVHMVMCQNAAWGNFRPLMGSHVCYIESISCDQNYGDVREAPSMWIDHHSEISGINTFAMEWQSGHEAIQCIVTANTHMSEFPHIGMDIS',
 #                          'MFDNDDNFLYFMEHKHFNKMPNCTTFEKRLSAEVYWFMSCRALSNRGWDCNHNEMKDMIAKSAAHRDSGGQEAFNVVYYQAFLNFNIHEFWTDSMCRGWRPNHRNAHENKQAKTNRWHATREFKHMDCKMLAVYPLLPQGIQSTAHCTVPCPYLSGKEKMYEAFMLKMDKNLGKTNQNLHSIRNRDVRVLPESLVMPTTRCPCKKPQKAMYFARRMHMRALGEFKFPDMNSYQETQTEHWGYNGYLGGNILSTRKYIVQDCGVCEYMSNAAKIGQLSEINENWPIVLAYQVCEIMLKNCAMFTLGVTVKWDPHQWDMINWMNMFFPKRDRAEMISEVWPGYGSVGMHGHRHVQMNPFEMKQSGILLAPIRNGLPKDLSAFVIPYLKRTPLQWMKPMMPNWDLKQNWWIAMRSCFMIWMSYFVTDPTLRSPIRVLSIWSKIHQQMRLLLNLNYEIMMYYSPWRPPHYKVWKWQIVESKLRCIIEIREGMIQTPDAAYIMVIWYNMPNFNLKFLAIFSDNQYVWMRKVIFNIECHLDHGGMMEPLSEFTLRWFIQKFMHRMNGCDSQGMTHKNLHYRKPYNSLNYIPQMCDNMFKHLIYWYEQTPLTQDPSFERKQNQPCFARHHLEQYGRNVFFYLPPIQNAFFPAYEMAGSVIMFPETVRPFYWYQELRLQTFVVLDATSALRTQKQTWFGIYDKLKRQPIWQEGFLHVIFKMVHMVMCQNAAWGNFRPLMGSHVCYIELSICVNMWFFLICDQNYVDVRHAHEQQHSEISGINTFADEWQSSSHEAIQYIGLQIRTHMSEFPFTIGMHQVDYSS')
-    sc, align1, align2 = localAlignment('SAATRPHFCLHGNEARPESKLILNGPPWHNVKKEEYHIIISWAMLSNIIYQDCLPSMGRSDMWGHFTIRSSRHALEQDKSNKLYGRQGIYVHVLWKPMTGQGEMLSELLKCPDEWAMYFGPVKVPRTGKTQSQDACAEHSTKKIFSLDTEVVNIGFWPICVWQWELCTMEIMQPMYFSHFWSTYRTMLRRKVAWWFYFFVITTVTTSAMVFIWKEATNSEEKLICFECIGLNKCGKYTTMQPQDFNTKADPRVQARLCNCSRTFGSWWNNVDAETHTDDYMQCYHAYLPYDQQAQEGRYEMKQRMHYLIHTSREPDKRTNLDEVAIRLTKLKVVSHCDQKGGEFYRPALWLLWPFDWKFWDPKTQSHTSDYGFKRHDLMLGPIKSEDRWKWQYASPALDITDTFALNNGCTCLSEVRRPCTFFMDFQDGNMKPGCSQSHPPFIPNALNYPSITDNSITGLFCATWMPYWKKFAQKWYNGAEHSIWFPMAIIILNYHVIYWKGHAKGEISPIQMDPEHQERYLHQGIGPQDIKMKEQIFHTTCIYRGARRNTVLECQMVHQDDDHFDIHPEGPGSWGGWHYCDESTLHGCPHYHIAHQDKTLHHYNPGFMRSTMCGQDSMLNLFYKMGTECCDAVPRWIVGYRCLYNCHDDRNVNHRFCISNECISNSCPWANRLSIGLTRHTGGLECKHAKHGNLSKCEMRFGQFVFKHSVWSYGRHINMENWDSVKRCDDDEFINEQISPMGQCFTSSGYNSFCRAQWSFHKLDNRQPYDDLRLGREYNRWPGLKLRYCVEWHKQHPAGTQKWECLMGHHMTRAKYIWSCPSFVQPLLFHHDPYVGEVSHYMIKKRHCHVWCCEVAGPTTAMVQFTLITNHGQSALLEGCKVFACHWSQHWTWACCFKM',
-'PIKKEHRYFDNLMTPKNLLFASGITWWWMEMDEARTFFVHIEKVFFLGENWMSQRALDFFTRGHRYVWGCALCIHKNKTQPEIWWCMIRREHWDTMSKMWRQFKAMALRMASAQIDWWCKNTNGDCNCHSYHPHMLFAGCKHGTIFGKMCAQVVAKNPSQNRKQQDARPWVPEAKKFLFQCDVNTVDWDNHLRNQFMKRGRRWLMPHWYRWWSEQSAPWQAEYKIRKGGGVFVYPYMWTIPHVHDTKPCGSNLKVQFVMSRCVRIDAETHVDDYNCNLQCYHAYLPYDQQAQELRVYDARFSLIIQRNNVNGANAIQACWWTLPKLKVVSHYECLQYRPALWLYMLQGITFWDPKTLSHTSCYSRFGRHDLMLGPRWKWGYASPALDINVPCNPQFMGTNYQMWCTCLSEVRVPCTFFMDFLDGNMKPGCSQTGPPQFFIPNALDNSITGLFCATWTLMPYWKKFAQKHLVFFPTYNGAEHSTWFPMAIFADNVFSKGILNYMNNDPRVIYWCKWWNFEHAIYRHQGIGPQDIKMKEQIFTCIYYWPNLPGARSDYDPGMNTVLECQMVHQKDDHFDIHHEGPGSWGGWHYSHFHWVDEPTLHGCCHYHIAMYRNWYQDKTLHHYNPGFMRSTMCGQAPFLKMVHWWMWPDLDMPMSKLYLDFKNNGEDEALTRHPMICYTIGVKVPCLMRIEGYSSEPDSWHPMTNDYGPTQDDYMTYNGHNHIRYNYNNMRYLATQSSIQQSVACWKGPLCALFIWVILFHYLEEHAIYYREFCVTGQEMSHLSVAMNNERCKSVGWVQYLRSPAYPRLETMIDMVNDHMGVKIDVTTYFCLRDMRNIHFKMNNTHYVTTVMVFHSYWNAVHCPQNVCKRLECYDKSDTFTYMNSFWYDILFVIEIKML')
+    sc, align1, align2 = affineAlignment('PRTEINS', 'PRTWPSEIN')
     print sc
     print align1
     print align2

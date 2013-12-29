@@ -5,7 +5,8 @@ Created on 11 Dec 2013
 """
 import unittest
 from collections import defaultdict
-from stepic.sequencing import manhatten, longestPath, localAlignment, PAM250
+from stepic.sequencing import manhatten, longestPath, localAlignment, PAM250, editDistance, \
+                fittingAlignment, overlapAlignment, affineAlignment
 
 class SequencingTest(unittest.TestCase):
 
@@ -46,6 +47,59 @@ class SequencingTest(unittest.TestCase):
             print score
             print align1
             print align2
+
+    def testEditDistance(self):
+        self.assertEqual(5, editDistance('PLEASANTLY', 'MEANLY'))
+
+    def testEditDistanceFromFile(self):
+        with open('data/sequencing/editDistance.txt') as fp:
+            seqs = [l.strip() for l in fp.readlines()]
+            print editDistance(seqs[0], seqs[1])
+
+    def testFittingAlignment(self):
+        score, align1, align2 = fittingAlignment('GTAGGCTTAAGGTTA', 'TAGATA')
+        self.assertEqual(2, score)
+        self.assertEqual('TAGGCTTA', align1)
+        self.assertEqual('TAGA--TA', align2)
+
+    def testFittingAlignmentFromFile(self):
+        with open('data/sequencing/fittingAlignment.txt') as fp:
+            seqs = [l.strip() for l in fp.readlines()]
+            score, align1, align2 = fittingAlignment(seqs[0], seqs[1])
+            print score
+            print align1
+            print align2
+
+    def testOverlapAlignment(self):
+        score, align1, align2 = overlapAlignment('PAWHEAE', 'HEAGAWGHEE')
+        self.assertEqual(1, score)
+        self.assertEqual('PAWHEAE------', align1)
+        self.assertEqual('---HEAGAWGHEE', align2)
+
+    def testOverlapAlignmentFromFile(self):
+        with open('data/sequencing/overlapAlignment.txt') as fp:
+            seqs = [l.strip() for l in fp.readlines()]
+            score, align1, align2 = overlapAlignment(seqs[0], seqs[1])
+            print score
+            print align1
+            print align2
+
+    def testLinearAlignmentFromFile(self):
+        with open('data/sequencing/linearAlignment.txt') as fp:
+            seqs = [l.strip() for l in fp.readlines()]
+            score, align1, align2 = affineAlignment(seqs[0], seqs[1], 5, 5)
+            print score
+            print align1
+            print align2
+
+    def testAffineAlignmentFromFile(self):
+        with open('data/sequencing/affineAlignment.txt') as fp:
+            seqs = [l.strip() for l in fp.readlines()]
+            score, align1, align2 = affineAlignment(seqs[0], seqs[1])
+            print score
+            print align1
+            print align2
+
 
 if __name__ == "__main__":
     # import sys;sys.argv = ['', 'Test.testName']
