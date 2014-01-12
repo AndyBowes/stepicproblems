@@ -6,7 +6,7 @@ Created on 11 Dec 2013
 import unittest
 from collections import defaultdict
 from stepic.sequencing import manhatten, longestPath, localAlignment, PAM250, editDistance, \
-                fittingAlignment, overlapAlignment, affineAlignment
+                fittingAlignment, overlapAlignment, affineAlignment, findMiddleEdge, multipleSequenceAlignment
 
 class SequencingTest(unittest.TestCase):
 
@@ -84,13 +84,10 @@ class SequencingTest(unittest.TestCase):
             print align1
             print align2
 
-    def testLinearAlignmentFromFile(self):
-        with open('data/sequencing/linearAlignment.txt') as fp:
+    def testFindMiddleEdge(self):
+        with open('data/sequencing/findMiddleEdge.txt') as fp:
             seqs = [l.strip() for l in fp.readlines()]
-            score, align1, align2 = affineAlignment(seqs[0], seqs[1], 5, 5)
-            print score
-            print align1
-            print align2
+            print findMiddleEdge(seqs[0], seqs[1])
 
     def testAffineAlignmentFromFile(self):
         with open('data/sequencing/affineAlignment.txt') as fp:
@@ -99,6 +96,23 @@ class SequencingTest(unittest.TestCase):
             print score
             print align1
             print align2
+
+    def testLinearAlignmentFromFile(self):
+        with open('data/sequencing/linearAlignment.txt') as fp:
+            seqs = [l.strip() for l in fp.readlines()]
+            score, align1, align2 = affineAlignment(seqs[0], seqs[1], 5, 5)
+            print score
+            print align1
+            print align2
+
+    def testMultipleAlignmentFromFile(self):
+        with open('data/sequencing/multipleAlignment.txt') as fp:
+            seqs = [l.strip() for l in fp.readlines()]
+            score, align1, align2, align3 = multipleSequenceAlignment(seqs[0], seqs[1], seqs[2])
+            print score
+            print align1
+            print align2
+            print align3
 
 
 if __name__ == "__main__":

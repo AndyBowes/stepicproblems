@@ -53,6 +53,7 @@ PAM250 = {'A': {'A': 2, 'C':-2, 'E': 0, 'D': 0, 'G': 1, 'F':-3, 'I':-1, 'H':-1, 
 DOWN = 1
 RIGHT = 2
 DIAG = 3
+BACK = 4
 START = 8
 END = 16
 HOME = -1
@@ -348,6 +349,106 @@ def affineAlignment(sequence1, sequence2, indelPenalty=1, openPenalty=11, scorin
     align1, align2 = _backtrackAlignment(start, score, sequence1, sequence2)
     return bestScore, align1, align2
 
+def findMiddleEdge(sequence1, sequence2, indelPenalty=1, openPenalty=11, scoringMatrix=None):
+    """
+    Perform a Global Alignment between 2 Sequences with Affine Gap Penalties
+    Return the best score and the 2 Aligned Sequences
+    """
+    if scoringMatrix == None:
+        scoringMatrix = BLOSUM62
+
+    s1Length = len(sequence1)
+    s2Length = len(sequence2)
+    score = [[(-i * indelPenalty, DOWN)] + list(repeat((0, 0), s1Length)) for i in range(s2Length + 1)]
+    for i in range(1, s1Length + 1):
+        score[0][i] = (-i * indelPenalty, RIGHT)
+    score[0][0] = (0, HOME)
+
+    for x in xrange(1, s1Length + 1):
+        for y in xrange(1, s2Length + 1):
+            rightPenalty = indelPenalty if score[y][x - 1][1] == RIGHT else openPenalty
+            downPenalty = indelPenalty if score[y - 1][x][1] == DOWN else openPenalty
+            cellScores = [ (score[y - 1][x - 1][0] + scoringMatrix[sequence1[x - 1]][sequence2[y - 1]], DIAG),
+                           (score[y][x - 1][0] - rightPenalty, RIGHT),
+                           (score[y - 1][x][0] - downPenalty, DOWN)]
+            score[y][x] = max(cellScores, key=lambda t: t[0])
+
+    def doBackTrack(s1Length, s2Length, score):
+        x = s1Length
+        y = s2Length
+        while y > s2Length / 2:
+            dir = score[y][x][1]
+            if dir == DIAG:
+                x -= 1
+                y -= 1
+            if dir == DOWN:
+                y -= 1
+            if dir == RIGHT:
+                x -= 1
+            yield (x, y)
+
+    route = list(doBackTrack(s1Length, s2Length, score))
+    return route[-1], route[-2]
+
+def multipleSequenceAlignment(sequence1, sequence2, sequence3):
+    s1Length = len(sequence1)
+    s2Length = len(sequence2)
+    s3Length = len(sequence3)
+
+    score = [[[(0, DOWN)] + list(repeat((0, DOWN), s1Length)) for i in range(s2Length + 1)] for j in range(s3Length + 1)]
+    for i in range(1, s1Length + 1):
+        for j in range(1, s2Length + 1):
+            score[0][j][i] = (0, DOWN + RIGHT)
+    for i in range(1, s2Length + 1):
+        for j in range(1, s3Length + 1):
+            score[j][i][0] = (0, BACK + RIGHT)
+    for i in range(1, s1Length + 1):
+        for j in range(1, s3Length + 1):
+            score[j][0][i] = (0, BACK + DOWN)
+    for i in range(1, s2Length + 1):
+        score[0][i][0] = (0, RIGHT)
+    for i in range(1, s3Length + 1):
+        score[i][0][0] = (0, BACK)
+    score[0][0][0] = (0, HOME)
+
+    for x in xrange(1, s1Length + 1):
+        for y in xrange(1, s2Length + 1):
+            for z in xrange(1, s3Length + 1):
+                cellScores = []
+                diagScore = 1 if (sequence1[x - 1] == sequence2[y - 1] and sequence1[x - 1] == sequence3[z - 1]) else 0
+                cellScores.append((score[z - 1][y - 1][x - 1][0] + diagScore, 7))
+                for direction in [6, 5, 3, 4, 2, 1]:
+                    deltaZ = -1 if direction & BACK > 0 else 0
+                    deltaY = -1 if direction & RIGHT > 0 else 0
+                    deltaX = -1 if direction & DOWN > 0 else 0
+                    cellScores.append((score[z + deltaZ][y + deltaY][x + deltaX][0], direction))
+                score[z][y][x] = max(cellScores, key=lambda t: t[0])
+
+    x = s1Length
+    y = s2Length
+    z = s3Length
+    bestScore = score[z][y][x][0]
+    align1, align2, align3 = '', '', ''
+    while score[z][y][x][1] != HOME:
+        direction = score[z][y][x][1]
+        if direction & DOWN > 0:
+            align1 = sequence1[x - 1] + align1
+            x -= 1
+        else:
+            align1 = '-' + align1
+        if direction & RIGHT > 0:
+            align2 = sequence2[y - 1] + align2
+            y -= 1
+        else:
+            align2 = '-' + align2
+        if direction & BACK > 0:
+            align3 = sequence3[z - 1] + align3
+            z -= 1
+        else:
+            align3 = '-' + align3
+
+    return bestScore, align1, align2, align3
+
 if __name__ == '__main__':  # pragma: no cover
 #    print dpChange(18996, [32, 22, 5, 3, 1])
 #    longestCommonSubsequence('GATCTAAATGAGACTTCATTGCAAGCAGTTCTGAGACCAGATACCGCCGCAGAGAAGCCCCCGGATACTGTTTAGATGGCGTGCACTGGACGTGATGCAAAAGTGAGCAGCCGTCCGATTCATCATTAGGACTGAATATCTCTCAATCGAAGGCAGAGCTCCCTATGGCGCACAGGCCTACATATGCGCGTAGAGTTGCAGTGCATGTCTCAGTGTCGCTGCATGACATCTATCCCCACAGGTTCTCTTGGTTGATGGATGCCATAGCGGCAGCAATGTAGCATTTTCCTGGTGCGAAAGATCCTCCATAGAGCTGGCGATTGCCCTTGTCTCCTATACTTGAGGGGGACCGATCCCTGGAGGCTCGGAATAGGACGCCACTGTAGCGGCTGACTCGGACAAAAGCGCCGGAAGATCCTTGGCACCGATGCCACTTTGCCCTCGCTTAATAGCTACGTCCACGACCGCGAATGACTGGCGAATCTTTACTTGGTTTACCAAAATTTCGGAAAAGCGTGTGTTAGCATAACGGGCTAATTAAATTCGTTGACACATAGATGCACCCTCAACCCTTACAAAACGGGCGTCGGTTTGCAGAGGCAGCTAAAGGAGTGACAGTGGGGCCCGACTCACTATAAAGGGTAAAAGACGGGGACGTCTTAAACTTGGATACGCAAACAGGTGGATGGCCAGTTCAGTTGACCGTATGGCCATTGGTGGATCATACCACGACGACCGAAGATGTAATGGTATATAACGCCATGGCTACCCTTCTTAGATTCTTAACTGCAAGATCCAGTAATGCAGGTCTTACGCTGCTACGCTCCAAAAGAGACCATACTGGGTGTATGCTTACAGTGAAGATACCACTATTTGGTGCTCGCCAGATGGTTCTTCTGTGAATCGCGTCTAGTGACGACGTTTCATTTGCT',
@@ -358,7 +459,13 @@ if __name__ == '__main__':  # pragma: no cover
 #    print longestPath(0, 4, {0:[(1, 7), (2, 4)], 2:[(3, 2)], 1:[(4, 1)], 3:[(4, 3)], 4:[]})
 #    print globalAlignment('MNCNDDNFLYFMEHITTQEVYWFMSCAVLGQRGWKCNHFSAADPVPYLPHCHRDSGGQEAFNVVMLQAFLNFNIHEFWTDSMCRGGRQRNAHQTHATRFFKQIHMDCMVTAIFWCKMLAVYPLLYQGIQSTAHCTEPYLSKKMKMYEAFMLKMYKICKHKPDHFTEPDVRVLPESLVMPTTRKTYCPCKKPQKSRRMHMRALGEFKWPDMGSYQETQTEHWGYNWLPEQSTRKYIVQRCEVCEYMSNAAKIGQLSEHNENWPIVLAYQVREVGLAEMFTDLSWFVGHDWLGVTQRWDLWDPINWMNMLFPDDRAEYIYNCWCIRYSRYGPETYCFTTFSVGMHGCEMKQSGKGLPKDLSAFVIQHYVPILKRTPLQWGWPMRSGENREWGVNFKSCFMIWMSEFFTDPRASPIRVLSIWSKIHQQILLLNLNYEIMMYYSPWHVWKWQAESKLRCIIEVRPSGMIQMPDAAYIMIFNLQKFLSIFSDSQLFNIECHLDPGGMMEPPSIQKFSMIHNFAEKMHRMNLENKVDSLYCDSQGMTHKNLGMNVHAKHGKPYNSLNYIPQMCDFMFKDRQTMCAMYPLTQDPSFQRKRNQPCFARHHLENRRNFPTQNAIFPAYEMTGSVIMFPETVRPFQADSDYWYWDQKFREAQTFVVLSATSALRTQKQTWVGEYDKEKKRQPIWQEGFLHVIFCFVHMVMCQNAAWGNFRPLMGSHVCYIESISCDQNYGDVREAPSMWIDHHSEISGINTFAMEWQSGHEAIQCIVTANTHMSEFPHIGMDIS',
 #                          'MFDNDDNFLYFMEHKHFNKMPNCTTFEKRLSAEVYWFMSCRALSNRGWDCNHNEMKDMIAKSAAHRDSGGQEAFNVVYYQAFLNFNIHEFWTDSMCRGWRPNHRNAHENKQAKTNRWHATREFKHMDCKMLAVYPLLPQGIQSTAHCTVPCPYLSGKEKMYEAFMLKMDKNLGKTNQNLHSIRNRDVRVLPESLVMPTTRCPCKKPQKAMYFARRMHMRALGEFKFPDMNSYQETQTEHWGYNGYLGGNILSTRKYIVQDCGVCEYMSNAAKIGQLSEINENWPIVLAYQVCEIMLKNCAMFTLGVTVKWDPHQWDMINWMNMFFPKRDRAEMISEVWPGYGSVGMHGHRHVQMNPFEMKQSGILLAPIRNGLPKDLSAFVIPYLKRTPLQWMKPMMPNWDLKQNWWIAMRSCFMIWMSYFVTDPTLRSPIRVLSIWSKIHQQMRLLLNLNYEIMMYYSPWRPPHYKVWKWQIVESKLRCIIEIREGMIQTPDAAYIMVIWYNMPNFNLKFLAIFSDNQYVWMRKVIFNIECHLDHGGMMEPLSEFTLRWFIQKFMHRMNGCDSQGMTHKNLHYRKPYNSLNYIPQMCDNMFKHLIYWYEQTPLTQDPSFERKQNQPCFARHHLEQYGRNVFFYLPPIQNAFFPAYEMAGSVIMFPETVRPFYWYQELRLQTFVVLDATSALRTQKQTWFGIYDKLKRQPIWQEGFLHVIFKMVHMVMCQNAAWGNFRPLMGSHVCYIELSICVNMWFFLICDQNYVDVRHAHEQQHSEISGINTFADEWQSSSHEAIQYIGLQIRTHMSEFPFTIGMHQVDYSS')
-    sc, align1, align2 = affineAlignment('PRTEINS', 'PRTWPSEIN')
+#     sc, align1, align2 = affineAlignment('PRTEINS', 'PRTWPSEIN')
+#     print sc
+#     print align1
+#     print align2
+#    print findMiddleEdge('PLEASANTLY', 'MEASNLY')
+    sc, a1, a2, a3 = multipleSequenceAlignment('ATATCCG', 'TCCGA', 'ATGTACTG')
     print sc
-    print align1
-    print align2
+    print a1
+    print a2
+    print a3

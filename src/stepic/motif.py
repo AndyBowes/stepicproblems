@@ -11,7 +11,7 @@ def getKmers(dna, k):
     """
     Find all the K-mers in a DNA sequence
     """
-    for i in range(len(dna) - k):
+    for i in range(len(dna) - k + 1):
         yield dna[i:i + k]
 
 def getKmerVariations(kmer, d):
