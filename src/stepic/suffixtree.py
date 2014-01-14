@@ -57,13 +57,25 @@ class Edge(object):
         else:
             if sequence.startswith(self.value):
                 pass
-            
+
     def sharedPrefix(self, sequence):
-        if len(self.value) == 0 or sequence.startswith(self.value):
-            # Find the next child which starts with the appropriate character
-        else:
+        sharedPrefix = ''
+        if len(sequence) > 0:
+            if len(self.value) == 0 or sequence.startswith(self.value):
+                # Find the next child which starts with the appropriate character
+                child = [c for c in self.children if c.value[0] == sequence[len(self.value)]]
+                if child:
+                    sharedPrefix = self.value + child[0].sharedPrefix(sequence[len(self.value):])
+                else:
+                    sharedPrefix = self.value
+            else:
             # Find how much of the sequence is shared
-        self.children
+                for i in range(min(len(sequence), len(self.value))):
+                    if sequence[i] == self.value[i]:
+                        sharedPrefix += sequence[i]
+                    else:
+                        break
+        return sharedPrefix;
 
 def buildSuffixTree(sequence):
     rootEdge = Edge('', None, None)
@@ -80,13 +92,26 @@ def longestRepeat(sequence):
     return rootEdge.getLongestRepeat('')
 
 def longestSharedRepeat(sequence1, sequence2):
-    rootEdge = buildSuffixTree(sequence1)
+    rootEdge = buildSuffixTree(sequence1 + '$')
     longestSequence = ''
-    for i in range(len(sequence2)):
+    for i in range(len(sequence2) - 1):
         seq = rootEdge.sharedPrefix(sequence2[i:])
         if len(seq) > len(longestSequence):
             longestSequence = seq
     return longestSequence
 
+def shortestUnsharedSeq(sequence1, sequence2):
+    rootEdge = buildSuffixTree(sequence2 + '$')
+    shortestSequence = 'A' * 999
+    for i in range(len(sequence1) - 1):
+        seq = rootEdge.sharedPrefix(sequence1[i:])
+        if len(seq) < len(shortestSequence) - 1:
+            shortestSequence = seq + sequence1[i + len(seq)]
+            print shortestSequence
+    return shortestSequence
+
+
 if __name__ == '__main__':
-    print longestRepeat('ATATCGTTTTATCGTT$')
+#    print longestRepeat('ATATCGTTTTATCGTT$')
+#    print longestSharedRepeat('TCGGTAGATTGCTCGCCCACTC', 'AGGGGCTCGCAGTGTAAGAA')
+    print shortestUnsharedSeq('TCGGTAGATTGCTCGCCCACTC', 'AGGGGACCTCGCAGTGTATTAGAA')
