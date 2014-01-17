@@ -10,7 +10,8 @@ from stepic.suffixtree import suff, longestRepeat, longestSharedRepeat, shortest
 class Test(unittest.TestCase):
 
     def testSuffixTree(self):
-        with open('data/suffix/buildsuffixtree.txt') as fp:
+#        with open('data/suffix/buildsuffixtree.txt') as fp:
+        with open('data/suffix/generatesuffixedges.txt') as fp:
             sequences = [x.strip() for x in fp.readlines()]
             suff(sequences[0])
 
