@@ -12,15 +12,14 @@ class Test(unittest.TestCase):
     def testBuildTrie(self):
         with open('data/trie/buildtrie.txt') as fp:
             sequences = [x.strip() for x in fp.readlines()]
-            buildTrie(sequences)
+            root = buildTrie(sequences)
+            root.walkTree()
 
     def testFindMatches(self):
         with open('data/trie/findmatches.txt') as fp:
             sequences = [x.strip() for x in fp.readlines()]
             matches = findMatches(sequences[0], sequences[1:])
-            for match in matches:
-                if len(match) > 0:
-                    print ' '.join([str(x) for x in match])
+            print ' '.join([str(x) for match in matches for x in match ])
 
 
 

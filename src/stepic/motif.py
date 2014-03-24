@@ -77,8 +77,12 @@ def kmerProb(kmer, profile):
     Calculate the probability of a kmer given a Probility Profile
     """
     prob = 1.0
-    for i in range(len(kmer)):
-        prob *= profile[i]['ACGT'.index(kmer[i])]
+    for i in range(len(profile)):
+        try:
+            prob *= profile[i]['ACGT'.index(kmer[i])]
+        except IndexError as e:
+            print 'Cannot find ~{0}~'.format(kmer[i])
+            raise e
     return prob
 
 def probableKmer(dna, k, profile):
@@ -90,6 +94,7 @@ def probableKmer(dna, k, profile):
     bestProb = -1
     for kmer in kmers:
         prob = kmerProb(kmer, profile)
+        print kmer, prob
         if prob > bestProb:
             bestProb = prob
             bestKmer = kmer

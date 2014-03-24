@@ -6,8 +6,15 @@ from collections import defaultdict, deque
 from itertools import product, repeat
 from copy import copy
 
+def getKmers(dna, k):
+    """
+    Find all the K-mers in a DNA sequence
+    """
+    for i in range(len(dna) - k + 1):
+        yield dna[i:i + k]
+
 def stringComposition(seq, kmerLength):
-    return sorted([seq[i:i + kmerLength] for i in range((len(seq) + 1) - kmerLength)])
+    return sorted(getKmers(seq, kmerLength))
 
 def overlapGraph(kmers):
     adjacencyList = defaultdict(list)
@@ -157,4 +164,5 @@ if __name__ == '__main__':  # pragma: no cover
 #    print universalString(18)
 #    print generatePairedReads('TAATGCCATGGGATGTT', 3, 2)
 #    print pairedReads(2, [['GAGA', 'TTGA'], ['TCGT', 'GATG'], ['CGTG', 'ATGT'], ['TGGT', 'TGAG'], ['GTGA', 'TGTT'], ['GTGG', 'GTGA'], ['TGAG', 'GTTG'], ['GGTC', 'GAGA'], ['GTCG', 'AGAT']])
-    print " ".join(contigs(['ATG', 'ATG', 'TGT', 'TGG', 'CAT', 'GGA', 'GAT', 'AGA']))
+#    print " ".join(contigs(['ATG', 'ATG', 'TGT', 'TGG', 'CAT', 'GGA', 'GAT', 'AGA']))
+    print universalString(18)

@@ -64,7 +64,6 @@ def buildTrie(sequences):
             edge = edge.addSequence(seq, i)
             seq = seq[1:]
         i += 1
-        print i
     return root
 
 def generateSequences(sequence):

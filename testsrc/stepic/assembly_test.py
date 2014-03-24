@@ -11,10 +11,12 @@ class AssemblyTest(unittest.TestCase):
 
     def testStringComposition(self):
         with open('data/assembly/stringComposition.txt') as fp:
-            kmerLength = int(fp.readline())
-            seq = fp.readline()
-            for sc in stringComposition(seq, kmerLength):
-                print sc
+            with open('data/assembly/stringComposition.out', 'w') as scout:
+                kmerLength = int(fp.readline())
+                seq = fp.readline()
+                for sc in stringComposition(seq, kmerLength):
+                    scout.write(sc)
+                    scout.write('\n')
 
     def testOverlapGraph(self):
         with open('data/assembly/overlapGraph.txt') as fp:
@@ -23,16 +25,22 @@ class AssemblyTest(unittest.TestCase):
 
     def testDeBruijn(self):
         with open('data/assembly/debruijnGraph.txt') as fp:
-            kmerLength = int(fp.readline())
-            seq = fp.readline()
-            for item in debruinGraph(seq, kmerLength):
-                print item
+            with open('data/assembly/debruijnGraph.out', 'w') as scout:
+                kmerLength = int(fp.readline())
+                seq = fp.readline()
+                for item in debruinGraph(seq, kmerLength):
+                    print item
+                    scout.write(item)
+                    scout.write('\n')
 
     def testDeBruijnFromKmers(self):
         with open('data/assembly/debruijnGraphFromKmers.txt') as fp:
-            kmers = [kmer.strip() for kmer in fp.readlines()]
-            for item in debruinGraphFromKmers(kmers):
-                print item
+            with open('data/assembly/debruijnGraphFromKmers.out', 'w') as scout:
+                kmers = [kmer.strip() for kmer in fp.readlines()]
+                for item in debruinGraphFromKmers(kmers):
+                    print item
+                    scout.write(item)
+                    scout.write('\n')
 
     def testEulerianCycle(self):
         with open('data/assembly/eulerianCycle.txt') as fp:
@@ -50,7 +58,7 @@ class AssemblyTest(unittest.TestCase):
             print stringReconstruction(nodes)
 
     def testPairedReads(self):
-        with open('data/assembly/pairedReads2.txt') as fp:
+        with open('data/assembly/pairedReads.txt') as fp:
             dist = int(fp.readline())
             pairs = [l.strip().split('|') for l in fp.readlines()]
             print pairedReads(dist, pairs)

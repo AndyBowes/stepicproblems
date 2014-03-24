@@ -13,8 +13,8 @@ class Test(unittest.TestCase):
         with open('data/suffix/buildsuffixarray.txt') as fp:
             with open('data/suffix/buildsuffixarray.out', 'w') as output:
                 sequences = [x.strip() for x in fp.readlines()]
-#                output.write(', '.join([str(x) for x in buildSuffixArray(sequences[0])]))
-                print buildSuffixArray(sequences[0])
+                print ', '.join([str(x) for x in buildSuffixArray(sequences[0])])
+                # print buildSuffixArray(sequences[0])
 
     def testGetSuffixEdges(self):
         with open('data/suffix/generatesuffixedges.txt') as fp:

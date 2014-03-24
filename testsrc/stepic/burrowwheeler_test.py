@@ -5,11 +5,10 @@ Created on 15 Jan 2014
 """
 import unittest
 from cProfile import Profile
-
+from itertools import groupby
 from stepic.burrowwheeler import burrowWheelerTransform, findPatterns, partialSuffixArray, \
-                                 multiPatternMatching, patternMatchWithMismatches
-
-from stepic.approximatematch import findApproximateMatches
+                                 multiPatternMatching, patternMatchWithMismatches, findPatternWithMismatches, \
+                                 inverseBurrowWheelerTransform
 
 class Test(unittest.TestCase):
 
@@ -17,6 +16,11 @@ class Test(unittest.TestCase):
         with open('data/burrow/transform.txt') as fp:
             sequences = [x.strip() for x in fp.readlines()]
             print burrowWheelerTransform(sequences[0])
+
+    def testInverseBurrowWheelerTransform(self):
+        with open('data/burrow/inverseTransform.txt') as fp:
+            sequences = [x.strip() for x in fp.readlines()]
+            print inverseBurrowWheelerTransform(sequences[0])
 
     def testBwtMatching(self):
         with open('data/burrow/bwtmatching.txt') as fp:
@@ -41,15 +45,24 @@ class Test(unittest.TestCase):
         with open('data/burrow/mismatchPatternMatchLarge.txt') as fp:
             sequence = fp.readline().strip()
             patterns = fp.readline().strip().split(' ')
-#            print 'Patterns : {0}'.format(len(patterns))
             mismatches = int(fp.readline().strip())
-            # print ' '.join([str(pos) for pos in sorted(patternMatchWithMismatches(sequence, patterns, mismatches))])
-            print len(patterns)
-            i = 0
-            for motif in patterns:
-                print i
-                findApproximateMatches(motif, mismatches, sequence)
-                i += 1
+            print 'Sequence Length:{0}   Patterns:{1}  Mismatches:{2}'.format(len(sequence), len(patterns), mismatches)
+            print 'Min Pattern Length:{0}'.format(min([len(p) for p in patterns]))
+            print ' '.join([str(pos) for pos in sorted(findPatternWithMismatches(sequence, patterns, mismatches))])
+
+    def testEcoliGenome(self):
+        def encode(seq):
+            return [(len(list(group)), name) for name, group in groupby(seq)]
+
+        with open('data/burrow/ecoligenome.txt') as fp:
+            sequence = fp.readline().strip()
+            print "Transform"
+            bwt = burrowWheelerTransform(sequence)
+            print "Start Encoding"
+            encoded = encode(bwt)
+            # print encoded
+            print len([(x, y) for x, y in encoded if x >= 10 ])
+
 
 if __name__ == "__main__":
     import sys;sys.argv = ['', 'Test.testPatternMatchWithMismatches']

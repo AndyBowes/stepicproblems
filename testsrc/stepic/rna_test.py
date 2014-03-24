@@ -4,9 +4,23 @@ Created on 24 Oct 2013
 @author: root
 '''
 import unittest
-from stepic.rna import cyclopeptideSequencing, linearSpectrum, sublist, cyclicSpectrum, leaderboardCyclopeptideSequencing, convolutionCyclopeptideSequencing
+from stepic.rna import cyclopeptideSequencing, linearSpectrum, sublist, cyclicSpectrum, \
+                    leaderboardCyclopeptideSequencing, convolutionCyclopeptideSequencing, \
+                    peptideEncoding, proteinTranslation
 
 class Test(unittest.TestCase):
+
+    def testProteinTranslation(self):
+        with open('data/rna/proteinEncoding.txt') as fp:
+            print proteinTranslation(fp.readline())
+
+    def testPeptideEncoding(self):
+        with open('data/rna/peptideEncoding.txt') as fp:
+            dna = fp.readline().strip()
+            protein = fp.readline().strip()
+            for x in peptideEncoding(dna, protein):
+                print x
+
     def getSpectrum(self):
         with open('data/cyclopeptidesequencing.txt') as fp:
             return [ int(x) for x in fp.readline().split()]
@@ -19,7 +33,7 @@ class Test(unittest.TestCase):
                 out.write(" ".join(list(set(cyclopeptideSequencing(spectrum)))))
 
     def testSpectrum(self):
-        print ' '.join([str(m) for m in linearSpectrum('QMTNAQAN')])
+        print ' '.join([str(m) for m in cyclicSpectrum('LLSLWAVFNNGD')])
 
     def testOccursCheck(self):
         spectrum = self.getSpectrum()
@@ -32,6 +46,7 @@ class Test(unittest.TestCase):
         spectrum = self.getSpectrum()
         self.assertEquals(cyclicSpectrum('QMTNAQAN'), spectrum)
 
+    @unittest.skip('Too long')
     def testLeaderBoardCyclopeptideSequencing(self):
         with open('data/leaderboardcyclopeptide2.txt') as fp:
             n = int(fp.readline().strip())
