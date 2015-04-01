@@ -33,6 +33,7 @@ def generateDistanceMatrix(edgesFile):
 
 def calculateLimbLength(node, distanceMatrix):
     """
+    Find the Limb Length of the given Node ID
     """
     def _innerCalc():
         l = len(distanceMatrix)
