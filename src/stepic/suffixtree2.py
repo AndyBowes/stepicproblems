@@ -83,7 +83,7 @@ def printNode(node, seq=None):
     return seq[node.startPos:node.startPos+node.length]
 
 if __name__ == '__main__':
-    seq = 'ACCTTAGTC$'
+    seq = 'ATAAATG$'
     tree = SuffixTree(seq)
     fn = partial(printNode, seq=seq)
 #    results = tree.apply( lambda node : tree.seq[node.startPos:node.startPos+node.length])

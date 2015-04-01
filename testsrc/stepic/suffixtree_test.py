@@ -16,7 +16,7 @@ class Test(unittest.TestCase):
             suff(sequences[0])
 
     def testLongestRepeat(self):
-        with open('data/suffix/longestrepeat.txt') as fp:
+        with open('data/suffix/longestrepeat2.txt') as fp:
             sequences = [x.strip() for x in fp.readlines()]
             print longestRepeat(sequences[0] + '$')
 
