@@ -1,4 +1,5 @@
 import networkx as nx
+import operator
 import re
 from itertools import ifilterfalse
 
@@ -49,6 +50,57 @@ def getLimbLength(limbLengthFile):
     distanceMatrix = [map(int, line.strip().split(' ')) for line in limbLengthFile]
     return calculateLimbLength(node, distanceMatrix)
     
+
+def reconstructGraph(distanceMatrix):
+    """
+    """
+    def getEdges():
+        nodeIds = range(len(distanceMatrix))
+        nextNode = len(distanceMatrix)
+        while len(nodeIds) > 2:
+            limbLengths = [calculateLimbLength(i, distanceMatrix) for i in range(nextNode)]
+            minIndex, minLimbLength = min(enumerate(limbLengths), key=operator.itemgetter(1))
+            
+            # Yield 1st Edge to new node
+            yield nodeIds[minIndex],nextNode, minLimbLength
+            nodeIds[minIndex] = nextNode
+            
+            # Adjust the remaining lengths in the column, row
+            distanceMatrix[minIndex] = [x - minLimbLength for x in distanceMatrix[minIndex]]
+            for i in ifilterfalse(lambda x:x==minIndex, range(len(nodeIds))):
+                distanceMatrix[i][minIndex] -= minLimbLength
+            # Reset the diagonal element to zero
+            distanceMatrix[minIndex][minIndex] = 0
+            
+            # Find the 2nd node (index of 1st match where limLength[i] = distanceMatch[minIndex][i]
+            
+            # Yield 2nd Edge to new node
+            yield nodeIds[index2],nextNode,limbLength2
+            
+            # Remove the row & column for the 2nd Node
+            
+            del nodeIds[index2]
+            
+            nextNode += 1
+            
+        # Yield the final edge
+        yield nodeIds[0], nodeIds[1], distanceMatrix[0][1] 
+
+    return getEdges()
+
+def additivePhylogeny(distanceMatrixFile):
+    """
+    Reconstruct a graph from a distance matrix file
+    Output the edges from the tree
+    """
+    distanceMatrix = [map(int, line.strip().split('\t')) for line in distanceMatrixFile]
+    
+    graph = reconstructGraph(distanceMatrix)
+    for adjacency in graph.adjacency_iter():
+        for k,v in adjacency[1].items():
+            yield adjacency[0],k, v['weight']
+
+
 if __name__ == '__main__':
 #    with open("data/edges.txt") as fp:
 #        generateDistanceMatrix(fp)
