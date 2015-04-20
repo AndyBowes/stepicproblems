@@ -17,10 +17,16 @@ class Test(unittest.TestCase):
             sequences = [x.strip() for x in fp.readlines()]
             print burrowWheelerTransform(sequences[0])
 
+    def testBurrowWheelerTransform2(self):
+        print burrowWheelerTransform('GATTGCTTTT$')
+
     def testInverseBurrowWheelerTransform(self):
         with open('data/burrow/inverseTransform.txt') as fp:
             sequences = [x.strip() for x in fp.readlines()]
             print inverseBurrowWheelerTransform(sequences[0])
+
+    def testInverseBurrowWheelerTransform2(self):
+        print inverseBurrowWheelerTransform('G$CAGCTAGGG')
 
     def testBwtMatching(self):
         with open('data/burrow/bwtmatching.txt') as fp:
