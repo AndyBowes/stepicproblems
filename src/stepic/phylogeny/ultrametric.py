@@ -3,7 +3,6 @@ Created on 14 Apr 2015
 
 @author: Andy
 '''
-from copy import deepcopy
 import networkx as nx
 from phylogeny import removeEntry
 
