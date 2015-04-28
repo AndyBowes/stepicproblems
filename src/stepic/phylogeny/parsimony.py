@@ -103,7 +103,7 @@ def isLeaf(graph, nodeId):
     """
     Check if the given nodeId identifies a root node (i.e. it has no successors)
     """
-    return graph.degree(nodeId) == 1
+    return len(graph.neighbors(nodeId)) <= 1
 
 def readParsimonyFile(parsimonyFile):
     """
@@ -114,7 +114,7 @@ def readParsimonyFile(parsimonyFile):
     numberOfLeaves = int(parsimonyFile.readline().strip())
     for nodeId in range(numberOfLeaves):
         parentId, dna = parsimonyFile.readline().strip().split('->')
-        graph.add_node(nodeId, {'dna':dna})
+        graph.add_node(nodeId, {'dna':dna, 'leaf':True})
         graph.add_edge(int(parentId), nodeId)
 
     for line in parsimonyFile.readlines():
@@ -175,8 +175,12 @@ def removeRootNode(graph, rootNode='root'):
     """
     rootChildren = graph.successors(rootNode)
     graph.add_edge(rootChildren[0], rootChildren[1])
+    graph.add_edge(rootChildren[1], rootChildren[0])
     graph.remove_node(rootNode)
-    return graph.to_undirected()
+    
+    for edge in graph.edges():
+        graph.add_edge(edge[1],edge[0])
+    return graph
 
 def getInternalEdges(graph):
     """
@@ -196,6 +200,10 @@ def getNeighbourGraphs(graph, node1, node2):
     
     node1Neighbours = [x for x in graph.neighbors(node1) if x != node2]
     node2Neighbours = [x for x in graph.neighbors(node2) if x != node1]
+    
+    if len(node1Neighbours) < 2 or len(node2Neighbours) < 2:
+        print node1Neighbours
+        print node2Neighbours
     
     graph1.remove_edge(node1,node1Neighbours[0])
     if graph1.has_edge(node1Neighbours[0],node1):
@@ -238,22 +246,19 @@ def printDnaAdjacencyList(graph):
             dna2 = graph.node[k]['dna']
             print '{0}->{1}:{2}'.format(dna1, dna2, hammingDistance(dna1,dna2)) 
 
-
-
 def performLargeParsimony(graph):
     """
     Perform Large Parsimony on an unrooted tree
     """
-    
     parsimonyScore, bestGraph=unrootedParsimony(graph, calculateDNA=True)
     
     while True:
         print parsimonyScore
         printDnaAdjacencyList(bestGraph)
         graphChanged = False
-        print getInternalEdges(bestGraph)
+#         print getInternalEdges(bestGraph)
         for node1, node2 in getInternalEdges(bestGraph):
-            print bestGraph.edges()
+#             print bestGraph.edges()
             for neighbourGraph in getNeighbourGraphs(bestGraph, node1, node2):
                 score, _ = unrootedParsimony(neighbourGraph, calculateDNA=True)
                 if score < parsimonyScore:
@@ -302,7 +307,7 @@ if __name__ == '__main__':
 #             print('')
 #         end = time.time()
 
-    with open('data/largeParsimony_sample.txt') as unrootedTreeFile:
+    with open('data/largeParsimony_extra.txt') as unrootedTreeFile:
         start = time.time()
         unrootedTreeFile.readline()
         graph = readUnrootedTreeFile(unrootedTreeFile.readlines())
