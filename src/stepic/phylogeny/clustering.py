@@ -5,6 +5,7 @@ Created on 28 Apr 2015
 
 from math import sqrt
 import operator
+from collections import defaultdict
 
 def distance(point1, point2):
     """
@@ -40,11 +41,51 @@ def squaredErrorDistortion(centres, points):
     total = sum(map(pow(y=2), [min([distance(point, centre) for centre in centres]) for point in points]))
     return total / len(points)
 
+def findClosestCentre(point, centres):
+    """
+    Find the closest centre to the given point
+    """
+    stats = {idx:distance(point, centre) for idx, centre in enumerate(centres)}
+    idx = min(stats.iteritems(), key=operator.itemgetter(1))[0]
+    return idx
+    
+def averagePosition(points):
+    """
+    Find the average position of the given set of points
+    """
+    return [x/len(points) for x in map(sum, zip(*points))]
+
+def lloydAlgorithm(centres, points):
+    """
+    Implement Lloyd Algorithm
+    """
+    prevCentres = []
+    for _ in range(100):
+        closestCentres = map(lambda point:findClosestCentre(point, centres),points)
+        if closestCentres == prevCentres:
+            break
+        prevCentres = closestCentres
+        centrePoints = defaultdict(list)
+        for idx, point in zip(closestCentres, points):
+            centrePoints[idx].append(point)
+        centres = map(averagePosition, centrePoints.itervalues())
+    return centres
 
 if __name__ == '__main__':  # pragma: no cover
-    with open('data/farthestFirstTraversal_challenge.txt') as fp:
+#     with open('data/farthestFirstTraversal_challenge.txt') as fp:
+#         centreCount, _ = map(int, fp.readline().strip().split(' '))
+#         points = readPoints(fp.readlines())
+#         centres = farthestFirstTraversal(centreCount, points)
+#         for centre in centres:
+#             print ' '.join(map(str, centre))
+
+    # Lloyd Algorithm
+    with open('data/lloydAlgorithm_challenge.txt') as fp:
         centreCount, _ = map(int, fp.readline().strip().split(' '))
         points = readPoints(fp.readlines())
-        centres = farthestFirstTraversal(centreCount, points)
+        centres = points[:centreCount]
+        centres = lloydAlgorithm(centres, points)
         for centre in centres:
-            print ' '.join(map(str, centre))
+            print ' '.join(map(lambda x:'{0:.3f}'.format(x), centre))
+    
+    
