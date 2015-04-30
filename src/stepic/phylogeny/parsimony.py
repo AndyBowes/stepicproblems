@@ -155,38 +155,47 @@ def addRootNode(graph):
     """
     # Add root node             
     edgeToBreak = graph.edges()[0]
-    graph.add_edge('root',edgeToBreak[0])
-    graph.add_edge('root',edgeToBreak[1])
-    graph.remove_edge(edgeToBreak[0], edgeToBreak[1])
-    if graph.has_edge(edgeToBreak[1], edgeToBreak[0]):
-        graph.remove_edge(edgeToBreak[1], edgeToBreak[0])
+    linkNodes(graph, 'root',edgeToBreak[0])
+    linkNodes(graph, 'root',edgeToBreak[1])
+    unlinkNodes(graph, edgeToBreak[0], edgeToBreak[1])
         
     for nodeId, depth in nx.shortest_path_length(graph, 'root').iteritems():
         graph.node[nodeId]['depth'] = depth
     
     # Remove all edges pointing back up the tree
     for node1,node2 in graph.edges():
-        if graph.node[node1]['depth'] > graph.node[node2]['depth']:
-            graph.remove_edge(node1,node2)
+        try:
+            if graph.node[node1]['depth'] > graph.node[node2]['depth']:
+                graph.remove_edge(node1,node2)
+        except KeyError:
+            print 'Unable to find depth {0}:{1}'.format(node1,node2)
 
 def removeRootNode(graph, rootNode='root'):
     """
     Remove the root node & convert to a bidirectional tree
     """
     rootChildren = graph.successors(rootNode)
-    graph.add_edge(rootChildren[0], rootChildren[1])
-    graph.add_edge(rootChildren[1], rootChildren[0])
+    linkNodes(graph, rootChildren[0], rootChildren[1])
     graph.remove_node(rootNode)
     
     for edge in graph.edges():
         graph.add_edge(edge[1],edge[0])
     return graph
 
+def linkNodes(graph, node1, node2):
+    graph.add_edge(node1, node2)
+    graph.add_edge(node2, node1)
+
+def unlinkNodes(graph, node1, node2):
+    graph.remove_edge(node1, node2)
+    graph.remove_edge(node2, node1)
+    
+
 def getInternalEdges(graph):
     """
     Return all of the internal edges of a graph
     """
-    return [e for e in graph.edges() if not ( isLeaf(graph, e[0]) or isLeaf(graph, e[1]))]
+    return [e for e in graph.edges() if not (isLeaf(graph, e[0]) or isLeaf(graph, e[1]))]
 
 
 def getNeighbourGraphs(graph, node1, node2):
@@ -201,32 +210,16 @@ def getNeighbourGraphs(graph, node1, node2):
     node1Neighbours = [x for x in graph.neighbors(node1) if x != node2]
     node2Neighbours = [x for x in graph.neighbors(node2) if x != node1]
     
-    if len(node1Neighbours) < 2 or len(node2Neighbours) < 2:
-        print node1Neighbours
-        print node2Neighbours
+    unlinkNodes(graph1, node1, node1Neighbours[0])
+    unlinkNodes(graph1, node2, node2Neighbours[1])
+    linkNodes(graph1, node1, node2Neighbours[1])
+    linkNodes(graph1, node2, node1Neighbours[0])
     
-    graph1.remove_edge(node1,node1Neighbours[0])
-    if graph1.has_edge(node1Neighbours[0],node1):
-        graph1.remove_edge(node1Neighbours[0],node1)
-    graph1.remove_edge(node2,node2Neighbours[1])
-    if graph1.has_edge(node2Neighbours[1],node2):
-        graph1.remove_edge(node2Neighbours[1],node2)
-    graph1.add_edge(node1,node2Neighbours[1])
-    graph1.add_edge(node2Neighbours[1],node1)
-    graph1.add_edge(node2,node1Neighbours[0])
-    graph1.add_edge(node1Neighbours[0],node2)
-    
-    graph2.remove_edge(node1,node1Neighbours[0])
-    if graph2.has_edge(node1Neighbours[0],node1):
-        graph2.remove_edge(node1Neighbours[0],node1)
-    graph2.remove_edge(node2,node2Neighbours[0])
-    if graph2.has_edge(node2Neighbours[0],node2):
-        graph2.remove_edge(node2Neighbours[0],node2)
-    graph2.add_edge(node1,node2Neighbours[0])
-    graph2.add_edge(node2Neighbours[0],node1)
-    graph2.add_edge(node2,node1Neighbours[0])
-    graph2.add_edge(node1Neighbours[0],node2)
-    
+    unlinkNodes(graph2, node1, node1Neighbours[0])
+    unlinkNodes(graph2, node2, node2Neighbours[0])
+    linkNodes(graph2, node1, node2Neighbours[0])
+    linkNodes(graph2, node2, node1Neighbours[0])
+
     return [graph1, graph2]
 
 def hammingDistance(sequence1,sequence2):
@@ -244,26 +237,27 @@ def printDnaAdjacencyList(graph):
         for k, v in adjacency[1].items():
             dna1 = graph.node[adjacency[0]]['dna']
             dna2 = graph.node[k]['dna']
-            print '{0}->{1}:{2}'.format(dna1, dna2, hammingDistance(dna1,dna2)) 
+            print '{0}->{1}:{2}'.format(dna1, dna2, hammingDistance(dna1,dna2))
+    print('')
 
 def performLargeParsimony(graph):
     """
     Perform Large Parsimony on an unrooted tree
     """
-    parsimonyScore, bestGraph=unrootedParsimony(graph, calculateDNA=True)
-    
+    bestUnrooted = graph
+    parsimonyScore, bestGraph=unrootedParsimony(graph.copy(), calculateDNA=True)
     while True:
         print parsimonyScore
         printDnaAdjacencyList(bestGraph)
         graphChanged = False
-#         print getInternalEdges(bestGraph)
-        for node1, node2 in getInternalEdges(bestGraph):
-#             print bestGraph.edges()
-            for neighbourGraph in getNeighbourGraphs(bestGraph, node1, node2):
-                score, _ = unrootedParsimony(neighbourGraph, calculateDNA=True)
+        candidateGraph = bestUnrooted.copy()
+        for node1, node2 in getInternalEdges(candidateGraph):
+            for neighbourGraph in getNeighbourGraphs(candidateGraph, node1, node2):
+                score, rootedGraph = unrootedParsimony(neighbourGraph.copy(), calculateDNA=True)
                 if score < parsimonyScore:
                     parsimonyScore = score
-                    bestGraph = neighbourGraph
+                    bestGraph = rootedGraph
+                    bestUnrooted = neighbourGraph
                     graphChanged = True
         if not graphChanged:
             break
@@ -307,7 +301,7 @@ if __name__ == '__main__':
 #             print('')
 #         end = time.time()
 
-    with open('data/largeParsimony_extra.txt') as unrootedTreeFile:
+    with open('data/largeParsimony_challenge.txt') as unrootedTreeFile:
         start = time.time()
         unrootedTreeFile.readline()
         graph = readUnrootedTreeFile(unrootedTreeFile.readlines())
