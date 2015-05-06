@@ -301,7 +301,7 @@ if __name__ == '__main__':
 #             print('')
 #         end = time.time()
 
-    with open('data/largeParsimony_challenge.txt') as unrootedTreeFile:
+    with open('data/largeParsimony_extra.txt') as unrootedTreeFile:
         start = time.time()
         unrootedTreeFile.readline()
         graph = readUnrootedTreeFile(unrootedTreeFile.readlines())

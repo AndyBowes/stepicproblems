@@ -3,9 +3,10 @@ Created on 28 Apr 2015
 
 """
 
-from math import sqrt
+from math import sqrt, exp
 import operator
 from collections import defaultdict
+from _functools import partial
 
 def distance(point1, point2):
     """
@@ -68,8 +69,21 @@ def lloydAlgorithm(centres, points):
         centrePoints = defaultdict(list)
         for idx, point in zip(closestCentres, points):
             centrePoints[idx].append(point)
+        # Move centres to the average position of their closest elements
         centres = map(averagePosition, centrePoints.itervalues())
     return centres
+
+
+def softKMeanClustering(centres, points, beta, iterations=100):
+    """
+    Perform Soft k-Mean Clustering to calculate the location of the centres
+    """
+    elements = [map(lambda centre : exp(-1 * beta * distance(point, centre)), centres) for point in points]
+    pointTotals = map(sum, elements)
+    hiddenMatrix = map(lambda values, total : [v/total for v in values], elements, pointTotals)
+    pass
+    
+    
 
 if __name__ == '__main__':  # pragma: no cover
 #     with open('data/farthestFirstTraversal_challenge.txt') as fp:
@@ -80,12 +94,24 @@ if __name__ == '__main__':  # pragma: no cover
 #             print ' '.join(map(str, centre))
 
     # Lloyd Algorithm
-    with open('data/lloydAlgorithm_challenge.txt') as fp:
+#     with open('data/lloydAlgorithm_challenge.txt') as fp:
+#         centreCount, _ = map(int, fp.readline().strip().split(' '))
+#         points = readPoints(fp.readlines())
+#         centres = points[:centreCount]
+#         centres = lloydAlgorithm(centres, points)
+#         for centre in centres:
+#             print ' '.join(map(lambda x:'{0:.3f}'.format(x), centre))
+
+    # Soft K-Means Clustering
+    with open('data/kmeans_sample.txt') as fp:
         centreCount, _ = map(int, fp.readline().strip().split(' '))
+        beta = float(fp.readline().strip())
         points = readPoints(fp.readlines())
         centres = points[:centreCount]
-        centres = lloydAlgorithm(centres, points)
+        centres = softKMeanClustering(centres, points, beta)
         for centre in centres:
             print ' '.join(map(lambda x:'{0:.3f}'.format(x), centre))
+    
+    
     
     
