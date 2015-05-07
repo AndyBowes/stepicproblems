@@ -5,6 +5,7 @@ Created on 28 Apr 2015
 
 from math import sqrt, exp
 import operator
+from itertools import imap
 from collections import defaultdict
 from _functools import partial
 
@@ -74,14 +75,25 @@ def lloydAlgorithm(centres, points):
     return centres
 
 
+def recalculateCentres(centres, points, hiddenMatrix):
+    """
+    """
+    denominators = map( lambda y : sum(map(lambda x : x[y], hiddenMatrix)), range(len(centres)))
+    positions = map(lambda x: zip(*x) , [map( lambda point, matrix : [(pos * matrix[id])/denominators[id] for pos in point], points, hiddenMatrix) for id, centre in enumerate(centres)])
+    newCentres = [map(sum, position) for position in positions]
+    return newCentres
+
 def softKMeanClustering(centres, points, beta, iterations=100):
     """
     Perform Soft k-Mean Clustering to calculate the location of the centres
     """
-    elements = [map(lambda centre : exp(-1 * beta * distance(point, centre)), centres) for point in points]
-    pointTotals = map(sum, elements)
-    hiddenMatrix = map(lambda values, total : [v/total for v in values], elements, pointTotals)
-    pass
+    for _ in range(iterations):
+        elements = [map(lambda centre : exp(-1 * beta * distance(point, centre)), centres) for point in points]
+        pointTotals = map(sum, elements)
+        hiddenMatrix = map(lambda values, total : [v/total for v in values], elements, pointTotals)
+    
+        centres = recalculateCentres(centres, points, hiddenMatrix)
+    return centres
     
     
 
@@ -103,7 +115,7 @@ if __name__ == '__main__':  # pragma: no cover
 #             print ' '.join(map(lambda x:'{0:.3f}'.format(x), centre))
 
     # Soft K-Means Clustering
-    with open('data/kmeans_sample.txt') as fp:
+    with open('data/kmeans_challenge.txt') as fp:
         centreCount, _ = map(int, fp.readline().strip().split(' '))
         beta = float(fp.readline().strip())
         points = readPoints(fp.readlines())
