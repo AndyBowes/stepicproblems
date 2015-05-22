@@ -18,7 +18,11 @@ class Test(unittest.TestCase):
         self.assertEqual(nearestNeighbour,
                          [[0,-68,-60,-60],[-68,0,-60,-60],[-60,-60,0,-68],[-60,-60,-68,0]])
     
-
+    def testFindNearestNeighbourMatrix(self):
+        distanceMatrix = [[0,13,16,10],[13,0,21,15],[16,21,0,18],[10,15,18,0]]
+        nearestNeighbour = constructNearestNeighbourMatrix(distanceMatrix)
+        print nearestNeighbour
+        
 if __name__ == "__main__":
     #import sys;sys.argv = ['', 'Test.testConstructNearestNeighbourMatrix']
     unittest.main()

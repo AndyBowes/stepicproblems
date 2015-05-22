@@ -8,6 +8,9 @@ import operator
 from itertools import imap
 from collections import defaultdict
 from _functools import partial
+from ultrametric import findLowestElement
+from phylogeny import removeEntry
+
 
 def distance(point1, point2):
     """
@@ -40,7 +43,7 @@ def squaredErrorDistortion(centres, points):
     """
     Calculate the squared error distortion
     """
-    total = sum(map(pow(y=2), [min([distance(point, centre) for centre in centres]) for point in points]))
+    total = sum(map(lambda x : pow(x,2), [min([distance(point, centre) for centre in centres]) for point in points]))
     return total / len(points)
 
 def findClosestCentre(point, centres):
@@ -62,9 +65,10 @@ def lloydAlgorithm(centres, points):
     Implement Lloyd Algorithm
     """
     prevCentres = []
-    for _ in range(100):
+    for i in range(1000):
         closestCentres = map(lambda point:findClosestCentre(point, centres),points)
         if closestCentres == prevCentres:
+            print 'Located best solution: {0}'.format(i)
             break
         prevCentres = closestCentres
         centrePoints = defaultdict(list)
@@ -90,13 +94,37 @@ def softKMeanClustering(centres, points, beta, iterations=100):
     for _ in range(iterations):
         elements = [map(lambda centre : exp(-1 * beta * distance(point, centre)), centres) for point in points]
         pointTotals = map(sum, elements)
-        hiddenMatrix = map(lambda values, total : [v/total for v in values], elements, pointTotals)
+        try:
+            hiddenMatrix = map(lambda values, total : [v/total for v in values], elements, pointTotals)
+            centres = recalculateCentres(centres, points, hiddenMatrix)
+            'Print done'
+        except ZeroDivisionError:
+            print 'Attempt to divide by zero'
+            print pointTotals
+            raise
     
-        centres = recalculateCentres(centres, points, hiddenMatrix)
     return centres
     
-    
 
+def hierarchicalClustering(nodeIDs, distanceMatrix):
+    """
+    """
+    while len(nodeIDs) > 1:
+        i,j = findLowestElement(distanceMatrix)
+        newNodeId = ' '.join([nodeIDs[i], nodeIDs[j]])
+        
+        # Calculate the Davg entry and add to the Distance Matrix
+        for ptr in range(len(distanceMatrix)):
+            distanceMatrix[ptr].append( ((distanceMatrix[ptr][i]) + (distanceMatrix[ptr][j]))/2.0)
+        newElement = [(distanceMatrix[i][ptr] + distanceMatrix[j][ptr])/2.0 for ptr in range(len(distanceMatrix))]
+        newElement.append(0)
+        distanceMatrix.append(newElement)
+        nodeIDs.append(newNodeId)
+        del nodeIDs[j]
+        del nodeIDs[i]
+        distanceMatrix = removeEntry(removeEntry(distanceMatrix, j),i)
+        yield newNodeId
+    
 if __name__ == '__main__':  # pragma: no cover
 #     with open('data/farthestFirstTraversal_challenge.txt') as fp:
 #         centreCount, _ = map(int, fp.readline().strip().split(' '))
@@ -115,15 +143,21 @@ if __name__ == '__main__':  # pragma: no cover
 #             print ' '.join(map(lambda x:'{0:.3f}'.format(x), centre))
 
     # Soft K-Means Clustering
-    with open('data/kmeans_challenge.txt') as fp:
-        centreCount, _ = map(int, fp.readline().strip().split(' '))
-        beta = float(fp.readline().strip())
-        points = readPoints(fp.readlines())
-        centres = points[:centreCount]
-        centres = softKMeanClustering(centres, points, beta)
-        for centre in centres:
-            print ' '.join(map(lambda x:'{0:.3f}'.format(x), centre))
+#     with open('data/kmeans_challenge.txt') as fp:
+#         centreCount, _ = map(int, fp.readline().strip().split(' '))
+#         beta = float(fp.readline().strip())
+#         points = readPoints(fp.readlines())
+#         centres = points[:centreCount]
+#         centres = softKMeanClustering(centres, points, beta)
+#         for centre in centres:
+#             print ' '.join(map(lambda x:'{0:.3f}'.format(x), centre))
     
     
-    
-    
+    # Hierarchical Clustering
+    with open('data/hierarchicalClustering_extra.txt') as fp:
+        nodeCount = int(fp.readline().strip())
+        distanceMatrix = [map(float, line.split(' ')) for line in fp.readlines()]
+        nodeIDs = map(str, range(1,nodeCount+1))
+        
+        for nodeId in hierarchicalClustering(nodeIDs, distanceMatrix):
+            print nodeId
