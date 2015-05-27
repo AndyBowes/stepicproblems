@@ -5,7 +5,6 @@ Created on 21 May 2015
 '''
 from math import log
 import operator
-from scipy.signal.ltisys import step
 
 def calcPathProbability(alphabet, path, transitionMatrix):
     """
@@ -117,7 +116,6 @@ def viterbi(path, alphabet, states, transitionMatrix, emissionMatrix):
     
     # Back track through the results to identify the most probable path by following the thread through the matrix
     # State at most probable state in final column.
-    
     hiddenChar = max(graph[-1].iteritems(), key=operator.itemgetter(1))[0]
     hmm = ''
     n = len(path)
@@ -125,9 +123,27 @@ def viterbi(path, alphabet, states, transitionMatrix, emissionMatrix):
         hmm = hiddenChar + hmm
         hiddenChar = graph[n][hiddenChar][1]
         n = n - 1
-        
     return hmm
+
+def hmmProbability(path, alphabet, states, transitionMatrix, emissionMatrix):
+    """
+    Calculate the probability of the path occurring given the transition & emission matrices.
+    Assumes that all of the initial starts are equally likely
+    """
     
+    def characterScore(fromState, toState, emittedChar, previousScores):
+        return previousScores[fromState] * transitionMatrix[fromState][toState] * emissionMatrix[toState][emittedChar]
+        
+    graph = [{ state : 1.0/len(states) * emissionMatrix[state][path[0]] for state in states}]
+    
+    # Go through t
+    for n in xrange(1,len(path)):
+        emittedChar = path[n]
+        previousScores = graph[-1]
+        newScores = {toState : sum(map(lambda fromState: characterScore(fromState, toState, emittedChar, previousScores), states )) for toState in states }
+        graph.append(newScores)
+
+    return sum(graph[-1].itervalues())
     
 
 if __name__ == '__main__':
@@ -141,8 +157,10 @@ if __name__ == '__main__':
 
     #path, alphabet, states, transmissionMatrix, emissionMatrix = readViterbiInputFile('data/viterbi_sample.txt')
     
-    hiddenPath = viterbi(*readViterbiInputFile('data/viterbi_challenge.txt'))
-    print hiddenPath
+#     hiddenPath = viterbi(*readViterbiInputFile('data/viterbi_challenge.txt'))
+#     print hiddenPath
     
+    probability = hmmProbability(*readViterbiInputFile('data/hmmProbability_challenge.txt'))
+    print probability
     
         

@@ -4,7 +4,8 @@ Created on 30 Apr 2015
 @author: Andy
 '''
 import unittest
-from stepic.phylogeny.clustering import averagePosition, squaredErrorDistortion, findFurthestPoint
+from stepic.phylogeny.clustering import averagePosition, squaredErrorDistortion, findFurthestPoint, \
+                        softKMeanClustering
 
 class ClusteringTest(unittest.TestCase):
 
@@ -27,6 +28,13 @@ class ClusteringTest(unittest.TestCase):
         
         distortion = findFurthestPoint(centres, points)
         print distortion
+        
+    def testSoftMeansClustering(self):
+        centres = [[3,5], [5,4]]
+        points = [[2,8], [2,5], [6,9], [7,5], [5,2]]
+        
+        softKMeanClustering(centres, points, beta=1, iterations=1)
+        
         
         
 if __name__ == "__main__":
