@@ -115,17 +115,17 @@ def scoreMotifs(motifs):
                 raise e
     return sum([noOfMotifs - max([x for x in m]) for m in occurs ])
 
-def constructProbabilityProfile(motifs, pseudocount=False):
+def constructProbabilityProfile(motifs, pseudocount=False,alphabet='ACGT'):
     """
     Construct the probability matrix for the set of Motifs
     """
-    noOfMotifs = len(motifs) + 4 if pseudocount else len(motifs)
+    noOfMotifs = len(motifs) + len(alphabet) if pseudocount else len(motifs)
     defaultValue = 1.0 / noOfMotifs if pseudocount else 0.0
-    occurs = [[defaultValue for _ in xrange(4)] for _ in xrange(len(motifs[0]))]
+    occurs = [[defaultValue for _ in xrange(len(alphabet))] for _ in xrange(len(motifs[0]))]
     for i in range(len(motifs)):
         motif = motifs[i]
         for j in range(len(motif)):
-            occurs[j]['ACGT'.index(motif[j])] += (1.0 / noOfMotifs)
+            occurs[j][alphabet.index(motif[j])] += (1.0 / noOfMotifs)
     return occurs
 
 def greedyMotifSearch(dna, k, pseudocount=False):

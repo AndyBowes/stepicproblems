@@ -1,0 +1,12 @@
+0.307
+--------
+A B C D E
+--------
+A-DBAAECE
+A--ABC-CE
+ADECAACCA
+-----AECE
+A-E-AAE-E
+-D-DDA-CE
+C-EAAAC-E
+ABE--AECE
