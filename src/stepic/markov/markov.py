@@ -127,6 +127,46 @@ def viterbi(path, alphabet, states, transitionMatrix, emissionMatrix):
         n = n - 1
     return hmm
 
+def viterbi2(path, alphabet, states, transitionMatrix, emissionMatrix, noOfSeedColumns):
+    """
+    
+    """
+    graph = [[ None for _ in xrange(len(path)+1)] for _ in xrange(noOfSeedColumns + 1)]
+    graph[0][0] = (0.0, 'S')
+    for j in xrange(1,len(path)+1):
+        graph[0][j] = (graph[0][j-1][0] + log(transitionMatrix['S']['I0'] * emissionMatrix['I0'][path[j-1]]), 'I0')
+    
+    for i in xrange(1,noOfSeedColumns+1):
+        nextState = 'D{0}'.format(i)
+        prevState = graph[i-1][0][1]
+        graph[i][0] = (graph[i-1][0][0] + log(transitionMatrix[prevState][nextState]), nextState)
+    
+    for i in xrange(1, noOfSeedColumns+1):
+        for j in xrange(1, len(path)+1):
+            graph[i][j] = max([(graph[i-1][j][0] + log(transitionMatrix[graph[i-1][j][1]]['D{0}'.format(i)]), 'D{0}'.format(i)),
+                               (graph[i-1][j-1][0] + log(transitionMatrix[graph[i-1][j-1][1]]['M{0}'.format(i)]*emissionMatrix['M{0}'.format(i)][path[j-1]]), 'M{0}'.format(i)),
+                               (graph[i][j-1][0] + log(transitionMatrix[graph[i][j-1][1]]['I{0}'.format(i)]*emissionMatrix['I{0}'.format(i)][path[j-1]]), 'I{0}'.format(i))],
+                              key=lambda t: t[0])
+    
+    # Start at the last cell and work backwards until you reach 0, 0
+    i = noOfSeedColumns
+    j = len(path)
+    hmm = []
+    while (i+j) > 0:
+        step = graph[i][j][1]
+        hmm.append(step)
+        if step[0] == 'M':
+            i -= 1
+            j -= 1
+        elif step[0] == 'D':
+            i -= 1
+        elif step[0] == 'I':
+            j -= 1
+        
+    hmm.reverse()
+    return hmm
+    
+
 def hmmProbability(path, alphabet, states, transitionMatrix, emissionMatrix):
     """
     Calculate the probability of the path occurring given the transition & emission matrices.
@@ -146,7 +186,6 @@ def hmmProbability(path, alphabet, states, transitionMatrix, emissionMatrix):
         graph.append(newScores)
 
     return sum(graph[-1].itervalues())
-
 
 def readHmmProfileFile(filePath):
     """
@@ -182,8 +221,6 @@ def readHmmSequenceAlignmentFile(filePath):
         fp.readline()
         alignments = [line.strip() for line in fp.readlines()]
     return threshold, alphabet, alignments, pseudoCount, sequence
-    
-    
     
 def hmmProfile(threshold,alphabet,alignments,pseudoCount=0):
     """
@@ -257,6 +294,7 @@ def hmmProfile(threshold,alphabet,alignments,pseudoCount=0):
         total = sum(elements.itervalues())
         return {k: v/total for k,v in elements.iteritems()}
 
+    # Apply the Pseudocount adjustment if required
     if pseudoCount > 0:
         for state in states:
             nextStates = getNextStates(state, states, noOfSeedColumns)
@@ -269,19 +307,16 @@ def hmmProfile(threshold,alphabet,alignments,pseudoCount=0):
             if state[0] in ['I','M']:
                 emissionMatrix[state] = rebaseElements({ k: v + pseudoCount for k,v in emissionMatrix[state].iteritems()})
 
+    return states, transitionMatrix, emissionMatrix, noOfSeedColumns
+
     
-    def printTable(xAxis,yAxis,values):
-        def formatValue(value):
-            return '0' if value == 0 else '{0:.3f}'.format(value)
-        print '\t'.join([''] + xAxis)
-        for y in yAxis:
-            print '\t'.join([y] + [formatValue(values[y][x]) for x in xAxis ])
+def printTable(xAxis,yAxis,values):
+    def formatValue(value):
+        return '0' if value == 0 else '{0:.3f}'.format(value)
+    print '\t'.join([''] + xAxis)
+    for y in yAxis:
+        print '\t'.join([y] + [formatValue(values[y][x]) for x in xAxis ])
 
-    printTable(states, states, transitionMatrix)
-    print '------'
-    printTable(alphabet, states, emissionMatrix)
-
-    return states, transitionMatrix, emissionMatrix
 #
 if __name__ == '__main__':
 #     alphabet, path, transitionMatrix = readPathProbabilityInputFile('data/pathprobability_challenge.txt')
@@ -303,9 +338,17 @@ if __name__ == '__main__':
 #    states, transitionMatrix, emissionMatrix = hmmProfile(*readHmmProfileFile('data/hmmProfile_sample.txt'))
     
 #    states, transitionMatrix, emissionMatrix = hmmProfile(*readHmmProfileWithPseudoCountFile('data/hmmProfileWithPseudoCount_challenge.txt'))
+#    printTable(states, states, transitionMatrix)
+#    print '------'
+#    printTable(alphabet, states, emissionMatrix)
     
-    threshold, alphabet, alignments, pseudoCount, path = readHmmSequenceAlignmentFile('data/hmmSequenceAlignment_sample.txt')
-    states, transitionMatrix, emissionMatrix = hmmProfile(threshold, alphabet, alignments, pseudoCount)
-    hmm = viterbi(path, alphabet, states, transitionMatrix, emissionMatrix)
-    print hmm
+    threshold, alphabet, alignments, pseudoCount, path = readHmmSequenceAlignmentFile('data/hmmSequenceAlignment_extra.txt')
+    states, transitionMatrix, emissionMatrix, noOfSeedColumns = hmmProfile(threshold, alphabet, alignments, pseudoCount)
+
+    printTable(states, states, transitionMatrix)
+    print '------'
+    printTable(alphabet, states, emissionMatrix)
+
+    hmm = viterbi2(path, alphabet, states, transitionMatrix, emissionMatrix, noOfSeedColumns)
+    print ' '.join(hmm)
         
