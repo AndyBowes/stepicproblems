@@ -4,8 +4,7 @@ Created on 21 May 2015
 @author: Andy Bowes
 '''
 from math import log
-from stepic.motif import constructProbabilityProfile
-from itertools import product
+from itertools import product, chain, groupby
 from collections import defaultdict
 
 import operator
@@ -131,40 +130,64 @@ def viterbi2(path, alphabet, states, transitionMatrix, emissionMatrix, noOfSeedC
     """
     
     """
+    directions = {'M':(-1,-1),'D':(-1,0),'I':(0,-1)}
+    
     graph = [[ None for _ in xrange(len(path)+1)] for _ in xrange(noOfSeedColumns + 1)]
-    graph[0][0] = (0.0, 'S')
-    for j in xrange(1,len(path)+1):
-        graph[0][j] = (graph[0][j-1][0] + log(transitionMatrix['S']['I0'] * emissionMatrix['I0'][path[j-1]]), 'I0')
+    graph[0][0] = {'S' : ('S', 1.0)}
+    
+    def getStates(i, j, direction):
+        iHash = i + direction[1][0]
+        jHash = j + direction[1][1]
+        return [ ('{0}{1}'.format(direction[0],i), fromState, prob[1]) for fromState, prob in graph[iHash][jHash].iteritems()]
+
+    def emissionProb(toState, emittedChar):
+        return 1.0 if toState[0] == 'D' else emissionMatrix[toState][emittedChar]
+    
+    def transitionProb(fromState, toState):
+        return transitionMatrix[fromState][toState]
+    
+    def weight(fromState, toState, emittedChar):
+        return transitionProb(fromState, toState) * emissionProb(toState, emittedChar)
+    
+    graph[0][1] = { 'I0' : ('S', graph[0][0]['S'][1] * weight('S','I0',path[0]))}
+    for j in xrange(2,len(path)+1):
+        graph[0][j] = { 'I0' : ('I0', graph[0][j-1]['I0'][1] * weight('I0','I0',path[j-1]))}
     
     for i in xrange(1,noOfSeedColumns+1):
-        nextState = 'D{0}'.format(i)
-        prevState = graph[i-1][0][1]
-        graph[i][0] = (graph[i-1][0][0] + log(transitionMatrix[prevState][nextState]), nextState)
+        fromState, toState = 'D' + str(i-1) if i > 1 else 'S', 'D' + str(i)
+        graph[i][0] = {toState : (fromState, graph[i-1][0][fromState][1] * transitionMatrix[fromState][toState])}
     
-    for i in xrange(1, noOfSeedColumns+1):
-        for j in xrange(1, len(path)+1):
-            graph[i][j] = max([(graph[i-1][j][0] + log(transitionMatrix[graph[i-1][j][1]]['D{0}'.format(i)]), 'D{0}'.format(i)),
-                               (graph[i-1][j-1][0] + log(transitionMatrix[graph[i-1][j-1][1]]['M{0}'.format(i)]*emissionMatrix['M{0}'.format(i)][path[j-1]]), 'M{0}'.format(i)),
-                               (graph[i][j-1][0] + log(transitionMatrix[graph[i][j-1][1]]['I{0}'.format(i)]*emissionMatrix['I{0}'.format(i)][path[j-1]]), 'I{0}'.format(i))],
-                              key=lambda t: t[0])
-    
+    for (i,j) in product(xrange(1, noOfSeedColumns+1), xrange(1, len(path)+1)):
+        emittedChar = path[j-1]
+        probs = sorted(chain.from_iterable([[(toState, fromState, prob * weight(fromState, toState, emittedChar)) for toState, fromState, prob in getStates(i,j,direction)]      
+                     for direction in directions.iteritems()]),key=lambda t: t[0])
+        elementValue = {k:max([i[1:]  for i in list(group)], key=lambda x:x[1]) for k, group in groupby(probs, lambda x: x[0])}
+        
+        graph[i][j] = elementValue
+
     # Start at the last cell and work backwards until you reach 0, 0
     i = noOfSeedColumns
     j = len(path)
+    
+    
+    finalSteps = [(k, element[1] * transitionProb(k,'E')) for k, element in graph[i][j].iteritems()]
+#     print finalSteps
+    step, _ = max(finalSteps, key=lambda x : x[1])
+    
     hmm = []
-    while (i+j) > 0:
-        step = graph[i][j][1]
-        hmm.append(step)
-        if step[0] == 'M':
-            i -= 1
-            j -= 1
-        elif step[0] == 'D':
-            i -= 1
-        elif step[0] == 'I':
-            j -= 1
-        
-    hmm.reverse()
-    return hmm
+    try:
+        while (i+j) > 0:
+            hmm.append(step)
+            nextStep = graph[i][j][step][0]
+            i += directions[step[0]][0]
+            j += directions[step[0]][1]
+            step = nextStep
+    except KeyError as e:
+        print 'Error'
+        print i,j, step
+        print graph[i][j]
+        raise e
+    return hmm[::-1] # Reverse the HMM
     
 
 def hmmProbability(path, alphabet, states, transitionMatrix, emissionMatrix):
@@ -208,6 +231,85 @@ def readHmmProfileWithPseudoCountFile(filePath):
         fp.readline()
         alignments = [line.strip() for line in fp.readlines()]
     return threshold, alphabet, alignments, pseudoCount
+
+def readHmmSoftDecodingFile(filePath):
+    """
+    Read information for the Soft Decoding Problem.
+    
+    Determines the probability of each state of the HMM at each position.
+    """
+    with open(filePath) as fp:
+        path = fp.readline().strip()
+        fp.readline()
+        alphabet = fp.readline().strip().split(' ')
+        fp.readline()
+        states = fp.readline().strip().split(' ')
+        fp.readline()
+        fp.readline()
+        transmissionMatrix = {}
+        for _ in xrange(len(states)):
+            elements = fp.readline().strip().split('\t')
+            key = elements[0]
+            values = elements[1:]
+            transmissionMatrix [key] = {k : v for k, v in zip(states, map(float, values))}
+        fp.readline()
+        fp.readline()
+        emissionMatrix = {}
+        for line in fp.readlines():
+            elements = line.strip().split('\t')
+            key = elements[0]
+            values = elements[1:]
+            emissionMatrix[key] = {k : v for k, v in zip(alphabet, map(float, values))}
+    return path, alphabet, states, transmissionMatrix, emissionMatrix
+    
+
+def hmmSoftDecoding(path, alphabet, states, transitionMatrix, emissionMatrix):
+    """
+    
+    """
+    def characterScore(fromState, toState, emittedChar, previousScores):
+        try:
+            return previousScores[fromState] * transitionMatrix[fromState][toState] * emissionMatrix[toState][emittedChar]
+        except TypeError as e:
+            raise e
+        
+    graph = [{ state : 1.0/len(states) * emissionMatrix[state][path[0]] for state in states}]
+    
+    # Go through the path
+    for n in xrange(1,len(path)):
+        emittedChar = path[n]
+        previousScores = graph[-1]
+        newScores = {toState : sum(map(lambda fromState: characterScore(fromState, toState, emittedChar, previousScores), states )) for toState in states }
+        graph.append(newScores)
+
+    forwardGraph = graph
+    forwardTotal = sum(graph[-1].itervalues())
+    
+    path = path[::-1] # Reverse the path
+    # Need to reverse the Transition Matrix
+    graph = [{ state : 1.0 for state in states}]
+
+#     reversedTransitionMatrix = {state : {} for state in states}
+#     for state1, state2 in product(states,states):
+#         reversedTransitionMatrix[state1][state2] = transitionMatrix[state2][state1]
+# 
+#     transitionMatrix = reversedTransitionMatrix
+
+    def reverseCharacterScore(fromState, toState, emittedChar, previousScores):
+        try:
+            return previousScores[fromState] * transitionMatrix[toState][fromState] * emissionMatrix[fromState][emittedChar]
+        except TypeError as e:
+            raise e
+
+    # Go through the reversed path
+    for n in xrange(0,len(path)-1):
+        emittedChar = path[n]
+        previousScores = graph[-1]
+        newScores = {toState : sum(map(lambda fromState: reverseCharacterScore(fromState, toState, emittedChar, previousScores), states )) for toState in states }
+        graph.append(newScores)
+
+    return map( lambda f : { state: (f[0][state] * f[1][state])/forwardTotal for state in states}, zip(forwardGraph, graph[::-1]))
+
 
 def readHmmSequenceAlignmentFile(filePath):
     """
@@ -342,13 +444,17 @@ if __name__ == '__main__':
 #    print '------'
 #    printTable(alphabet, states, emissionMatrix)
     
-    threshold, alphabet, alignments, pseudoCount, path = readHmmSequenceAlignmentFile('data/hmmSequenceAlignment_extra.txt')
-    states, transitionMatrix, emissionMatrix, noOfSeedColumns = hmmProfile(threshold, alphabet, alignments, pseudoCount)
+#     threshold, alphabet, alignments, pseudoCount, path = readHmmSequenceAlignmentFile('data/hmmSequenceAlignment_challenge.txt')
+#     states, transitionMatrix, emissionMatrix, noOfSeedColumns = hmmProfile(threshold, alphabet, alignments, pseudoCount)
+# 
+#     hmm = viterbi2(path, alphabet, states, transitionMatrix, emissionMatrix, noOfSeedColumns)
+#     print ' '.join(hmm)
 
-    printTable(states, states, transitionMatrix)
-    print '------'
-    printTable(alphabet, states, emissionMatrix)
+    path, alphabet, states, transmissionMatrix, emissionMatrix = readHmmSoftDecodingFile('data/hmmSoftDecoding_challenge.txt')
+    probabilities = hmmSoftDecoding(path, alphabet, states, transmissionMatrix, emissionMatrix)
+    print '\t'.join(states)
+    for p in probabilities:
+        print '\t'.join([ '{0:.4f}'.format(p[state]) for state in states])
 
-    hmm = viterbi2(path, alphabet, states, transitionMatrix, emissionMatrix, noOfSeedColumns)
-    print ' '.join(hmm)
+
         
